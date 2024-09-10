@@ -7,8 +7,7 @@ inputs:
     required: true
   pr_url:
     description: 'Return failure after posting message'
-    required: false
-    default: false
+    required: true
 
 outputs:
   release_label:
@@ -32,6 +31,7 @@ runs:
       env:
         PR_URL: ${{ inputs.pr_url }}
         GITHUB_TOKEN: ${{ inputs.token }}
+      shell: bash
       run: |
           PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files)
 
