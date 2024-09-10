@@ -36,7 +36,7 @@ jobs:
 
           echo "${PR_DETAILS}"
           
-          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]' | tr '\n' ' ')
+          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
           LABELS=$(echo "${PR_DETAILS}" | jq '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
           
           NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
@@ -54,7 +54,9 @@ jobs:
 
           if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
             echo "Found Dirs: $CHANGED_DIRS"
-            echo "CHANGED_DIRS=$CHANGED_DIRS" >> $GITHUB_OUTPUT
+            echo "CHANGED_DIRS=<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_DIRS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
             echo "path_error="  >> $GITHUB_OUTPUT
           else
             echo "path_error=No Directories found in changed paths" >> $GITHUB_OUTPUT
