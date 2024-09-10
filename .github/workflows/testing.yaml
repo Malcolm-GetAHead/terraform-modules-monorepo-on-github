@@ -71,6 +71,7 @@ jobs:
       - name: Fail on invalid PR details
         uses: ./.github/actions/pr-comment
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           fail_run: true
           update_existing: true
           comment_capture: '## Terraform Module Release'

@@ -8,9 +8,9 @@ inputs:
   # commit_sha:
   #   description: 'Commit SHA to list in subtext (github.event.after)'
   #   required: true
-  # token:
-  #   description: 'GitHub runner token'
-  #   required: true
+  token:
+    description: 'GitHub runner token'
+    required: true
   fail_run:
     description: 'Return failure after posting message'
     required: false
@@ -40,7 +40,7 @@ runs:
       env:
         COMMIT_SHA: ${{ github.event.after }}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ inputs.token }}
         script: |
             const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
