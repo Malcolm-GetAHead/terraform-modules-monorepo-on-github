@@ -120,6 +120,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create cache dir
+        run: mkdir -p "${{ github.workspace }}/.cache/terraform"
+
       - name: Terraform Format
         run: |
           declare -a tf_fmt
