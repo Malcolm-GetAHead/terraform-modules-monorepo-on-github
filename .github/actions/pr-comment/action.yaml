@@ -42,7 +42,7 @@ runs:
                 return comment.user.type === 'Bot' && comment.body.includes('${{ inputs.comment_capture }}');
             });
 
-            let output = `${{ inputs.comment }}`;
+            let output = (function() {/*${{ inputs.comment }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1];
 
             output += `\n\n*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
 
