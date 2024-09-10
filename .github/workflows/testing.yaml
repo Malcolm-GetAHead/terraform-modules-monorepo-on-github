@@ -73,17 +73,15 @@ jobs:
 
             const output = `#### Terraform Module Release
             
-            ` + '${{ steps.pr_details.outputs.label_error }}' != '' ? `
+            ` + ('${{ steps.pr_details.outputs.label_error }}' != '' ? `
             ##### PR Label error
 
             ${{ steps.pr_details.outputs.label_error }}
-            ` : '' + '${{ steps.pr_details.outputs.path_error }}' != '' ? `
+            ` : '') + ('${{ steps.pr_details.outputs.path_error }}' != '' ? `
             ##### PR Path error
 
             ${{ steps.pr_details.outputs.path_error }}
-            ` : ''
-
-            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
+            ` : '') + `*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
 
             if (botComment) {
                 github.rest.issues.updateComment({
