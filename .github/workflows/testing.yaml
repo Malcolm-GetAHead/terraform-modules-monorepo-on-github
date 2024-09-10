@@ -134,7 +134,7 @@ jobs:
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
           echo "output=${output}"  >> $GITHUB_OUTPUT
 
-          echo "${output}"
+          echo "Output: ${output}"
 
       - name: Terraform Validate
         run: |
@@ -144,7 +144,7 @@ jobs:
           while read -r tf_dir; do
             cd "$init_dir/$tf_dir"
             
-            tf_val+=(terraform init)
+            tf_val+=(terraform init --backend=false)
             rtn_chk=$?
             if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
 
@@ -158,4 +158,4 @@ jobs:
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
           echo "output=${output}"  >> $GITHUB_OUTPUT
 
-          echo "${output}"
+          echo "Output: ${output}"
