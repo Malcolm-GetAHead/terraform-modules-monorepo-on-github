@@ -146,7 +146,11 @@ jobs:
           fi
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-          echo "output=${output}"  >> $GITHUB_OUTPUT
+          {
+            echo "output<<EOF"
+            echo "$output"
+            echo "EOF"
+          }  >> $GITHUB_OUTPUT
 
           echo "Exit: ${rtn_chk}"
           echo "Output: ${output}"
@@ -174,7 +178,11 @@ jobs:
           fi
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-          echo "output=${output}"  >> $GITHUB_OUTPUT
+          {
+            echo "output<<EOF"
+            echo "$output"
+            echo "EOF"
+          }  >> $GITHUB_OUTPUT
 
           echo "Exit: ${rtn_chk}"
           echo "Output: ${output}"
@@ -204,7 +212,11 @@ jobs:
           fi
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-          echo "output=${output}"  >> $GITHUB_OUTPUT
+          {
+            echo "output<<EOF"
+            echo "$output"
+            echo "EOF"
+          }  >> $GITHUB_OUTPUT
 
           echo "Exit: ${rtn_chk}"
           echo "Output: ${output}"
