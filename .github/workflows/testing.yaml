@@ -33,7 +33,7 @@ jobs:
         run: |
           PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files)
           
-          CHANGED_DIRS=$(echo "${PR_DETAILS} | jq -r '[.files[].path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]'")
+          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[].path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
           LABELS=$(echo "${PR_DETAILS}" | jq '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
           
           NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
