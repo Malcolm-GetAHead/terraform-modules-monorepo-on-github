@@ -49,7 +49,7 @@ jobs:
             echo "label_error=No release type labels found(patch/minor/major/no-release)" >> $GITHUB_OUTPUT
           fi
 
-          if [ "" -gt "0" ]; then
+          if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
             echo "release-type=$LABELS" >> $GITHUB_OUTPUT
             echo "path_error="  >> $GITHUB_OUTPUT
           else
