@@ -89,6 +89,7 @@ jobs:
         if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
           fail_run: true
           update_existing: true
           comment_capture: '## Terraform Module Release'

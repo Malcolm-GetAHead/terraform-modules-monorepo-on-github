@@ -5,9 +5,9 @@ inputs:
   comment:
     description: 'Comment to be posted'
     required: true
-  # commit_sha:
-  #   description: 'Commit SHA to list in subtext (github.event.after)'
-  #   required: true
+  commit_sha:
+    description: 'Commit SHA to list in subtext (github.event.after)'
+    required: true
   token:
     description: 'GitHub runner token'
     required: true
@@ -38,7 +38,7 @@ runs:
     - name: PR Comment
       uses: actions/github-script@v7
       env:
-        COMMIT_SHA: ${{ github.event.after }}
+        COMMIT_SHA: ${{ inputs.commit_sha }}
       with:
         github-token: ${{ inputs.token }}
         script: |
