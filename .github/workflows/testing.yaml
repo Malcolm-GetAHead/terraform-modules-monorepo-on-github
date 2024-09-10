@@ -37,7 +37,7 @@ jobs:
           echo "${PR_DETAILS}"
           
           CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
-          LABELS=$(echo "${PR_DETAILS}" | jq '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
+          LABELS=$(echo "${PR_DETAILS}" | jq -r '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
           
           NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
           NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
@@ -55,7 +55,7 @@ jobs:
           if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
             echo "Found Dirs: $CHANGED_DIRS"
             {
-              echo "CHANGED_DIRS=<<EOF"
+              echo "CHANGED_DIRS<<EOF"
               echo "$CHANGED_DIRS"
               echo "EOF"
             }  >> $GITHUB_OUTPUT
