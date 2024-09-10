@@ -115,6 +115,9 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.terraform_version }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
       
       - name: Terraform Format
         run: |
@@ -130,6 +133,8 @@ jobs:
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
           echo "output=${output}"  >> $GITHUB_OUTPUT
+
+          echo "${output}"
 
       - name: Terraform Validate
         run: |
@@ -152,3 +157,5 @@ jobs:
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
           echo "output=${output}"  >> $GITHUB_OUTPUT
+
+          echo "${output}"
