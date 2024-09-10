@@ -57,7 +57,7 @@ jobs:
           fi
 
       - name: Fail on invalid PR details
-        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.label_error != ''
+        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
