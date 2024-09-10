@@ -6,11 +6,11 @@ inputs:
     description: 'Comment to be posted'
     required: true
   # commit_sha:
-    description: 'Commit SHA to list in subtext (github.event.after)'
-    required: true
+  #   description: 'Commit SHA to list in subtext (github.event.after)'
+  #   required: true
   # token:
-    description: 'GitHub runner token'
-    required: true
+  #   description: 'GitHub runner token'
+  #   required: true
   fail_run:
     description: 'Return failure after posting message'
     required: false
@@ -29,8 +29,8 @@ inputs:
   #   description: 'Repository (context.repo.repo)'
   #   required: true
   # issue_number:
-    description: 'PR Issue number (context.issue.number)'
-    required: true
+    # description: 'PR Issue number (context.issue.number)'
+    # required: true
 
 runs:
   using: 'composite'
