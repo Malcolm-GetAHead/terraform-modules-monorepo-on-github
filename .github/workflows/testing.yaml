@@ -36,7 +36,7 @@ jobs:
 
           echo "${PR_DETAILS}"
           
-          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
+          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]' | tr '\n' ' ')
           LABELS=$(echo "${PR_DETAILS}" | jq '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
           
           NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
