@@ -107,8 +107,9 @@ jobs:
               </summary>
               
               ```diff
-              ${{ steps.pr_details.outputs.output }}
+              ${{ steps.tf_format.outputs.output }}
               ```
+              </details>
 
       - name: Terraform Init
         run: |
