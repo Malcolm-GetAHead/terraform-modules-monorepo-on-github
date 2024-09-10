@@ -51,9 +51,20 @@ jobs:
             echo "release_type=$LABELS" >> $GITHUB_OUTPUT
             echo "label_error=" >> $GITHUB_OUTPUT
           elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
-            echo "label_error=Too many release type labels: $( echo $LABELS | tr '\n' ' ' )" >> $GITHUB_OUTPUT
+            {
+              echo "label_error<<EOF"
+              echo "### PR Label error"
+              echo "Too many release type labels: $( echo $LABELS | tr '\n' ' ' )"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
           else
-            echo "label_error=No release type labels found(patch/minor/major/no-release)" >> $GITHUB_OUTPUT
+            {
+              echo "label_error<<EOF"
+              echo "### PR Label error"
+              echo "No release type labels found(patch/minor/major/no-release)"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
+            echo "label_error=" >> $GITHUB_OUTPUT
           fi
 
           if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
@@ -65,11 +76,17 @@ jobs:
             }  >> $GITHUB_OUTPUT
             echo "path_error="  >> $GITHUB_OUTPUT
           else
-            echo "path_error=No Directories found in changed paths" >> $GITHUB_OUTPUT
+            {
+              echo "path_error<<EOF"
+              echo "### PR Path error"
+              echo "No Directories found in changed paths"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
           fi
           
       - name: Fail on invalid PR details
         uses: ./.github/actions/pr-comment
+        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fail_run: true
