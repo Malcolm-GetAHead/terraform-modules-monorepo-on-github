@@ -1,0 +1,82 @@
+name: GitHub PR Comment
+description: Create a GitHub Bot comment on a PR
+
+inputs:
+  token:
+    description: 'GitHub runner token'
+    required: true
+  pr_url:
+    description: 'Return failure after posting message'
+    required: false
+    default: false
+
+outputs:
+  release_label:
+    description: ''
+    value: '${{ steps.pr_details.outputs.release_label }}'
+  label_error:
+    description: ''
+    value: '${{ steps.pr_details.outputs.label_error }}'
+  changed_dirs:
+    description: ''
+    value: '${{ steps.pr_details.outputs.changed_dirs }}'
+  path_error:
+    description: ''
+    value: '${{ steps.pr_details.outputs.path_error }}'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: PR Comment
+      id: pr_details
+      env:
+        PR_URL: ${{ inputs.pr_url }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+          PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files)
+
+          echo "${PR_DETAILS}"
+          
+          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
+          LABELS=$(echo "${PR_DETAILS}" | jq -r '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
+          
+          NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
+          NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
+          
+          if [ "$NUMBER_OF_LABELS" -eq "1" ] ; then
+            echo "Found label: $LABELS"
+            echo "release_label=$LABELS" >> $GITHUB_OUTPUT
+            echo "label_error=" >> $GITHUB_OUTPUT
+          elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
+            {
+              echo "label_error<<EOF"
+              echo "### PR Label error"
+              echo "Too many release type labels: $( echo $LABELS | tr '\n' ' ' )"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
+          else
+            {
+              echo "label_error<<EOF"
+              echo "### PR Label error"
+              echo "No release type labels found (patch/minor/major/no-release)"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
+            echo "label_error=" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
+            echo "Found Dirs: $CHANGED_DIRS"
+            {
+              echo "changed_dirs<<EOF"
+              echo "$CHANGED_DIRS"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
+            echo "path_error="  >> $GITHUB_OUTPUT
+          else
+            {
+              echo "path_error<<EOF"
+              echo "### PR Path error"
+              echo "No terraform files found in directories with changes"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
+          fi

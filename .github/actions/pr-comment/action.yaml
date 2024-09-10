@@ -22,15 +22,6 @@ inputs:
   comment_capture:
     description: 'Comment text used to find the bot comment'
     required: false
-  # owner:
-  #   description: 'Repository owner (context.repo.owner)'
-  #   required: true
-  # repo:
-  #   description: 'Repository (context.repo.repo)'
-  #   required: true
-  # issue_number:
-    # description: 'PR Issue number (context.issue.number)'
-    # required: true
 
 runs:
   using: 'composite'
