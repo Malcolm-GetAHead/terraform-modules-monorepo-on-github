@@ -14,28 +14,89 @@ on:
     types:
       - closed
 
+env:
+  is-merge-event: >-
+    ${{ github.event_name == 'pull_request_target'
+     && github.event.action == 'closed'
+     && github.event.pull_request.merged == true }}
+
 jobs:
   detect:
     runs-on: ubuntu-latest
-    name: 'Detect pull request context'
+    name: 'Release pre-build'
     steps:
-      - name: Check PR labels
-        id: check_pr_label
+      - name: Get PR Labels and changed dirs
+        id: pr_details
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files)
-          echo "${PR_DETAILS}"
-          # LABELS=$(echo "${PR_DETAILS}" | jq '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
-          # NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
-          # if [ "$NUMBER_OF_LABELS" -eq "1" ] ; then
-          #   echo "Found: $LABELS"
-          #   echo "release-type=$LABELS" >> $GITHUB_OUTPUT
-          # elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
-          #   echo "::error ::Too many release type labels: $( echo $LABELS | tr '\n' ' ' )"
-          #   exit 1
-          # else
-          #   echo "::error ::No release type labels found(patch/minor/major/no-release)"
-          #   exit 2
-          # fi
+          
+          CHANGED_DIRS=$(echo "${PR_DETAILS} | jq -r '[.files[].path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]'")
+          LABELS=$(echo "${PR_DETAILS}" | jq '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
+          
+          NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
+          NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
+          
+          if [ "$NUMBER_OF_LABELS" -eq "1" ] ; then
+            echo "Found: $LABELS"
+            echo "release_type=$LABELS" >> $GITHUB_OUTPUT
+            echo "label_error=''" >> $GITHUB_OUTPUT
+          elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
+            echo "label_error=Too many release type labels: $( echo $LABELS | tr '\n' ' ' )" >> $GITHUB_OUTPUT
+          else
+            echo "label_error=No release type labels found(patch/minor/major/no-release)" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "" -gt "0" ]; then
+            echo "release-type=$LABELS" >> $GITHUB_OUTPUT
+            echo "path_error=''"  >> $GITHUB_OUTPUT
+          else
+            echo "path_error=No Directories found in change path" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fail on invalid PR details
+        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.label_error != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+            })
+            const botComment = comments.find(comment => {
+                return comment.user.type === 'Bot' && comment.body.includes('Terraform Module Release')
+            })
+
+            const output = `#### Terraform Module Release
+            
+            ` + '${{ steps.pr_details.outputs.label_error }}' != '' ? `
+            ##### PR Label error
+
+            ${{ steps.pr_details.outputs.label_error }}
+            ` : '' + '${{ steps.pr_details.outputs.path_error }}' != '' ? `
+            ##### PR Path error
+
+            ${{ steps.pr_details.outputs.path_error }}
+            ` : ''
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
+
+            if (botComment) {
+                github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: output
+                })
+            } else {
+                github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+                })
+            }
