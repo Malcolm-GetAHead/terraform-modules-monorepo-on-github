@@ -120,15 +120,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: TF Cache 
-        uses: actions/cache@v4
-        with:
-          path: "${{ github.workspace }}/.cache/terraform"
-          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.terraform_version }}
-
-      - name: Create cache dir if not exists
-        run: mkdir -p "${{ github.workspace }}/.cache/terraform"
-      
       - name: Terraform Format
         run: |
           declare -a tf_fmt
@@ -136,7 +127,7 @@ jobs:
 
           while read -r tf_dir; do
             if [ -d "$tf_dir" ]; then
-              tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir")")
+              tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir" 2>&1)")
             else
               tf_fmt+=("Unable to check directory: '${tf_dir}'")
             fi
@@ -160,64 +151,70 @@ jobs:
 
       - name: Terraform Init
         run: |
-          declare -a tf_init
-          rtn_chk=0
-          init_dir=$(pwd)
+            declare -a tf_init
+            rtn_chk=0
+            init_dir=$(pwd)
 
-          while read -r tf_dir; do
-            if [ -d "$init_dir/$tf_dir" ]; then
-              cd "$init_dir/$tf_dir"
-            
-              tf_init+=("$(terraform init --backend=false | grep -v 'Terraform has been successfully initialized' || echo "")")
-            else
-              tf_init+=("Unable to check directory: '${tf_dir}'")
+            while read -r tf_dir; do
+              if [ -d "$init_dir/$tf_dir" ]; then
+                cd "$init_dir/$tf_dir" || exit 1
+              
+                tf_init="$(terraform validate -no-color 2>&1 || true)"
+                if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
+                  tf_init+=("$rtn_val")
+                fi
+              else
+                tf_init+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+
+            output=$(printf "%s\n" "${tf_init[@]}")
+
+            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
             fi
-          done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
-          
-          output=$(printf "%s\n" "${tf_init[@]}")
 
-          if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
-            rtn_chk=1
-          fi
-          
-          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-          {
-            echo "output<<EOF"
-            echo "$output"
-            echo "EOF"
-          }  >> $GITHUB_OUTPUT
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-          echo "Exit: ${rtn_chk}"
-          echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
 
       - name: Terraform Validate
         run: |
-          declare -a tf_val
-          rtn_chk=0
-          init_dir=$(pwd)
+            declare -a tf_val
+            rtn_chk=0
+            init_dir=$(pwd)
 
-          while read -r tf_dir; do
-            if [ -d "$init_dir/$tf_dir" ]; then
-              cd "$init_dir/$tf_dir"
-            
-              tf_val+=("$(terraform validate -no-color | grep -v 'The configuration is valid' || echo "")")
-            else
-              tf_val+=("Unable to check directory: '${tf_dir}'")
+            while read -r tf_dir; do
+              if [ -d "$init_dir/$tf_dir" ]; then
+                cd "$init_dir/$tf_dir" || exit 1
+              
+                rtn_val="$(terraform validate -no-color 2>&1 || true)"
+                if ! grep -q 'The configuration is valid' <<< "$rtn_val"; then
+                  tf_val+=("$rtn_val")
+                fi
+              else
+                tf_val+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+
+            output=$(printf "%s\n" "${tf_val[@]}")
+
+            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
             fi
-          done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
-          
-          output=$(printf "%s\n" "${tf_val[@]}")
 
-          if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
-            rtn_chk=1
-          fi
-          
-          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-          {
-            echo "output<<EOF"
-            echo "$output"
-            echo "EOF"
-          }  >> $GITHUB_OUTPUT
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-          echo "Exit: ${rtn_chk}"
-          echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
