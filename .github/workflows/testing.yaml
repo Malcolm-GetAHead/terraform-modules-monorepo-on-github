@@ -15,6 +15,7 @@ on:
       - closed
 
 env:
+  terraform_version: 1.9.5
   is-merge-event: >-
     ${{ github.event_name == 'pull_request_target'
      && github.event.action == 'closed'
@@ -103,3 +104,47 @@ jobs:
                 body: output
                 })
             }
+
+            core.setFailed("Fail on invalid PR details");
+      
+      - name: Install terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.terraform_version }}
+      
+      - name: Terraform Format
+        run: |
+          declare -a tf_fmt
+          exit_code=0
+          while read -r tf_dir; do
+            tf_fmt+=(terraform fmt -write=false -diff -check -no-color "$tf_dir")
+            rtn_chk=$?
+            if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
+          done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+          
+          output=$(printf "%s\n" "${array[@]}")
+          
+          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
+          echo "output=${output}"  >> $GITHUB_OUTPUT
+
+      - name: Terraform Validate
+        run: |
+          declare -a tf_val
+          exit_code=0
+          init_dir=$(pwd)
+          while read -r tf_dir; do
+            cd "$init_dir/$tf_dir"
+            
+            tf_val+=(terraform init)
+            rtn_chk=$?
+            if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
+
+            tf_val+=(terraform validate -no-color)
+            rtn_chk=$?
+            if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
+          done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+          
+          output=$(printf "%s\n" "${array[@]}")
+          
+          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
+          echo "output=${output}"  >> $GITHUB_OUTPUT
