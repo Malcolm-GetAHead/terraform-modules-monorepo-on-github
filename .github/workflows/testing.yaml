@@ -71,17 +71,17 @@ jobs:
                 return comment.user.type === 'Bot' && comment.body.includes('Terraform Module Release')
             })
 
-            const output = `#### Terraform Module Release
+            let output = "#### Terraform Module Release";
             
-            ` + ('${{ steps.pr_details.outputs.label_error }}' != '' ? `
-            ##### PR Label error
+            if( '${{ steps.pr_details.outputs.label_error }}' != '') {
+              output += "\n\n##### PR Label error\n\n${{ steps.pr_details.outputs.label_error }}"
+            }
 
-            ${{ steps.pr_details.outputs.label_error }}
-            ` : '') + ('${{ steps.pr_details.outputs.path_error }}' != '' ? `
-            ##### PR Path error
+            if( '${{ steps.pr_details.outputs.path_error }}' != '') {
+              output += "\n\n##### PR Path error\n\n${{ steps.pr_details.outputs.path_error }}"
+            }
 
-            ${{ steps.pr_details.outputs.path_error }}
-            ` : '') + `*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
+            output += `*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
 
             if (botComment) {
                 github.rest.issues.updateComment({
