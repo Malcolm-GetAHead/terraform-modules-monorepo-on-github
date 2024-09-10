@@ -15,6 +15,7 @@ on:
       - closed
 
 env:
+  TF_PLUGIN_CACHE_DIR: "${{ github.workspace }}/.cache/terraform"
   terraform_version: 1.9.5
   is-merge-event: >-
     ${{ github.event_name == 'pull_request_target'
@@ -118,44 +119,92 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Cache 
+        uses: actions/cache@v4
+        with:
+          path: "${{ github.workspace }}/.cache/terraform"
+          key: ${{ runner.os }}-${{ runner.arch }}-${{ env.terraform_version }}
       
       - name: Terraform Format
         run: |
           declare -a tf_fmt
-          exit_code=0
+          rtn_chk=0
+
           while read -r tf_dir; do
-            tf_fmt+=(terraform fmt -write=false -diff -check -no-color "$tf_dir")
-            rtn_chk=$?
-            if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
+            if [ -d "$tf_dir" ]; then
+              tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir")")
+            else
+              tf_fmt+=("Unable to check directory: '${tf_dir}'")
+            fi
           done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
           
-          output=$(printf "%s\n" "${array[@]}")
+          output=$(printf "%s\n" "${tf_fmt[@]}")
+
+          if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
+            rtn_chk=1
+          fi
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
           echo "output=${output}"  >> $GITHUB_OUTPUT
+
+          echo "Exit: ${rtn_chk}"
+          echo "Output: ${output}"
+
+      - name: Terraform Init
+        run: |
+          declare -a tf_init
+          rtn_chk=0
+          init_dir=$(pwd)
+
+          while read -r tf_dir; do
+            if [ -d "$init_dir/$tf_dir" ]; then
+              cd "$init_dir/$tf_dir"
+            
+              tf_init+=("$(terraform init --backend=false || echo "")")
+            else
+              tf_init+=("Unable to check directory: '${tf_dir}'")
+            fi
+          done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+          
+          output=$(printf "%s\n" "${tf_init[@]}")
+
+          if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
+            rtn_chk=1
+          fi
+          
+          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
+          echo "output=${output}"  >> $GITHUB_OUTPUT
+
+          echo "Exit: ${rtn_chk}"
+          echo "Output: ${output}"
 
           echo "Output: ${output}"
 
       - name: Terraform Validate
         run: |
           declare -a tf_val
-          exit_code=0
+          rtn_chk=0
           init_dir=$(pwd)
-          while read -r tf_dir; do
-            cd "$init_dir/$tf_dir"
-            
-            tf_val+=(terraform init --backend=false)
-            rtn_chk=$?
-            if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
 
-            tf_val+=(terraform validate -no-color)
-            rtn_chk=$?
-            if [ "$rtn_chk" -gt "$exit_code" ]; then exit_code=$rtn_chk; fi
+          while read -r tf_dir; do
+            if [ -d "$init_dir/$tf_dir" ]; then
+              cd "$init_dir/$tf_dir"
+            
+              tf_val+=("$(terraform validate -no-color || echo "")")
+            else
+              tf_val+=("Unable to check directory: '${tf_dir}'")
+            fi
           done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
           
-          output=$(printf "%s\n" "${array[@]}")
+          output=$(printf "%s\n" "${tf_val[@]}")
+
+          if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
+            rtn_chk=1
+          fi
           
           echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
           echo "output=${output}"  >> $GITHUB_OUTPUT
 
+          echo "Exit: ${rtn_chk}"
           echo "Output: ${output}"
