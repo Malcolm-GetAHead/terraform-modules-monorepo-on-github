@@ -66,16 +66,16 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-            })
+            });
             const botComment = comments.find(comment => {
-                return comment.user.type === 'Bot' && comment.body.includes('Terraform Module Release')
-            })
+                return comment.user.type === 'Bot' && comment.body.includes('Terraform Module Release');
+            });
 
-# let output = "#### Terraform Module Release";
+            let output = "#### Terraform Module Release";
 
-# if( '${{ steps.pr_details.outputs.label_error }}' != '') {
-#   output += "\n\n##### PR Label error\n\n${{ steps.pr_details.outputs.label_error }}"
-# }
+            if( '${{ steps.pr_details.outputs.label_error }}' != '') {
+              output += "\n\n##### PR Label error\n\n${{ steps.pr_details.outputs.label_error }}"
+            }
 
 # if( '${{ steps.pr_details.outputs.path_error }}' != '') {
 #   output += "\n\n##### PR Path error\n\n${{ steps.pr_details.outputs.path_error }}"
