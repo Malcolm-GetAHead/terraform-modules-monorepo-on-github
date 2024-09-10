@@ -162,7 +162,7 @@ jobs:
               if [ -d "$init_dir/$tf_dir" ]; then
                 cd "$init_dir/$tf_dir" || exit 1
               
-                tf_init="$(terraform validate -no-color 2>&1 || true)"
+                tf_init="$(terraform init --backend=false 2>&1 || true)"
                 if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
                   tf_init+=("$rtn_val")
                 fi
