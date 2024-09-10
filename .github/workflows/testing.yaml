@@ -120,11 +120,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache 
+      - name: TF Cache 
         uses: actions/cache@v4
         with:
           path: "${{ github.workspace }}/.cache/terraform"
           key: ${{ runner.os }}-${{ runner.arch }}-${{ env.terraform_version }}
+
+      - name: Create cache dir if not exists
+        run: mkdir -p "${{ github.workspace }}/.cache/terraform"
       
       - name: Terraform Format
         run: |
@@ -165,7 +168,7 @@ jobs:
             if [ -d "$init_dir/$tf_dir" ]; then
               cd "$init_dir/$tf_dir"
             
-              tf_init+=("$(terraform init --backend=false || echo "")")
+              tf_init+=("$(terraform init --backend=false | grep -v 'Terraform has been successfully initialized' || echo "")")
             else
               tf_init+=("Unable to check directory: '${tf_dir}'")
             fi
@@ -187,8 +190,6 @@ jobs:
           echo "Exit: ${rtn_chk}"
           echo "Output: ${output}"
 
-          echo "Output: ${output}"
-
       - name: Terraform Validate
         run: |
           declare -a tf_val
@@ -199,7 +200,7 @@ jobs:
             if [ -d "$init_dir/$tf_dir" ]; then
               cd "$init_dir/$tf_dir"
             
-              tf_val+=("$(terraform validate -no-color || echo "")")
+              tf_val+=("$(terraform validate -no-color | grep -v 'The configuration is valid' || echo "")")
             else
               tf_val+=("Unable to check directory: '${tf_dir}'")
             fi
