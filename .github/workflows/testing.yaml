@@ -25,6 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Release pre-build'
     steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT" | jq
+
       - name: Get PR Labels and changed dirs
         id: pr_details
         env:
