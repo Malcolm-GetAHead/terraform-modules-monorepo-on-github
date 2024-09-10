@@ -36,60 +36,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           pr_url: ${{github.event.pull_request.html_url}}
-
-      # - name: Get PR Labels and changed dirs
-      #   id: pr_details
-      #   env:
-      #     PR_URL: ${{github.event.pull_request.html_url}}
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #     PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files)
-
-      #     echo "${PR_DETAILS}"
-          
-      #     CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
-      #     LABELS=$(echo "${PR_DETAILS}" | jq -r '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
-          
-      #     NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
-      #     NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
-          
-      #     if [ "$NUMBER_OF_LABELS" -eq "1" ] ; then
-      #       echo "Found label: $LABELS"
-      #       echo "release_label=$LABELS" >> $GITHUB_OUTPUT
-      #       echo "label_error=" >> $GITHUB_OUTPUT
-      #     elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
-      #       {
-      #         echo "label_error<<EOF"
-      #         echo "### PR Label error"
-      #         echo "Too many release type labels: $( echo $LABELS | tr '\n' ' ' )"
-      #         echo "EOF"
-      #       }  >> $GITHUB_OUTPUT
-      #     else
-      #       {
-      #         echo "label_error<<EOF"
-      #         echo "### PR Label error"
-      #         echo "No release type labels found (patch/minor/major/no-release)"
-      #         echo "EOF"
-      #       }  >> $GITHUB_OUTPUT
-      #       echo "label_error=" >> $GITHUB_OUTPUT
-      #     fi
-
-      #     if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
-      #       echo "Found Dirs: $CHANGED_DIRS"
-      #       {
-      #         echo "changed_dirs<<EOF"
-      #         echo "$CHANGED_DIRS"
-      #         echo "EOF"
-      #       }  >> $GITHUB_OUTPUT
-      #       echo "path_error="  >> $GITHUB_OUTPUT
-      #     else
-      #       {
-      #         echo "path_error<<EOF"
-      #         echo "### PR Path error"
-      #         echo "No terraform files found in directories with changes"
-      #         echo "EOF"
-      #       }  >> $GITHUB_OUTPUT
-      #     fi
           
       - name: Fail on invalid PR details
         uses: ./.github/actions/pr-comment
@@ -114,6 +60,7 @@ jobs:
         run: mkdir -p "${{ github.workspace }}/.cache/terraform"
 
       - name: Terraform Format
+        id: tf_format
         run: |
           declare -a tf_fmt
           rtn_chk=0
@@ -141,6 +88,27 @@ jobs:
 
           echo "Exit: ${rtn_chk}"
           echo "Output: ${output}"
+
+      - name: Fail on invalid TF Format
+        uses: ./.github/actions/pr-comment
+        if: steps.tf_format.outputs.rtn_chk != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              <details>
+              <summary>
+              ### Terraform Format Error
+              </summary>
+              
+              ```
+              ${{ steps.pr_details.outputs.Output }}
+              ```
 
       - name: Terraform Init
         run: |
