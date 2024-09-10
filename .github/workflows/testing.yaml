@@ -112,6 +112,7 @@ jobs:
               </details>
 
       - name: Terraform Init
+        id: tf_init
         run: |
             declare -a tf_init
             rtn_chk=0
@@ -146,7 +147,30 @@ jobs:
             echo "Exit: ${rtn_chk}"
             echo "Output: ${output}"
 
+      - name: Fail on invalid TF Init
+        uses: ./.github/actions/pr-comment
+        if: steps.tf_init.outputs.exit != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              <details>
+              <summary>
+              ### Terraform Init Error
+              </summary>
+              
+              ```
+              ${{ steps.tf_init.outputs.output }}
+              ```
+              </details>
+
       - name: Terraform Validate
+        id: tf_validate
         run: |
             declare -a tf_val
             rtn_chk=0
@@ -180,3 +204,25 @@ jobs:
 
             echo "Exit: ${rtn_chk}"
             echo "Output: ${output}"
+
+      - name: Fail on invalid TF Validate
+        uses: ./.github/actions/pr-comment
+        if: steps.tf_validate.outputs.exit != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              <details>
+              <summary>
+              ### Terraform Validate Error
+              </summary>
+              
+              ```
+              ${{ steps.tf_validate.outputs.output }}
+              ```
+              </details>
