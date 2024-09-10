@@ -61,7 +61,7 @@ jobs:
             {
               echo "label_error<<EOF"
               echo "### PR Label error"
-              echo "No release type labels found(patch/minor/major/no-release)"
+              echo "No release type labels found (patch/minor/major/no-release)"
               echo "EOF"
             }  >> $GITHUB_OUTPUT
             echo "label_error=" >> $GITHUB_OUTPUT
@@ -79,7 +79,7 @@ jobs:
             {
               echo "path_error<<EOF"
               echo "### PR Path error"
-              echo "No Directories found in changed paths"
+              echo "No terraform files found in directories with changes"
               echo "EOF"
             }  >> $GITHUB_OUTPUT
           fi
