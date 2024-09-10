@@ -40,7 +40,7 @@ runs:
       env:
         COMMIT_SHA: ${{ github.event.after }}
       with:
-        github-token: inputs.token
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
             const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
