@@ -64,53 +64,64 @@ jobs:
           else
             echo "path_error=No Directories found in changed paths" >> $GITHUB_OUTPUT
           fi
-
+          
       - name: Fail on invalid PR details
-        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
-        env:
-          COMMIT_SHA: ${{ github.event.after }}
-        uses: actions/github-script@v7
+        uses: ./.github/actions/pr-comment
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data: comments } = await github.rest.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-            });
-            const botComment = comments.find(comment => {
-                return comment.user.type === 'Bot' && comment.body.includes('Terraform Module Release');
-            });
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+              ${{ steps.pr_details.outputs.label_error }}
+              ${{ steps.pr_details.outputs.path_error }}
 
-            let output = "## Terraform Module Release";
+      # - name: Fail on invalid PR details
+      #   if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
+      #   env:
+      #     COMMIT_SHA: ${{ github.event.after }}
+      #   uses: actions/github-script@v7
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       const { data: comments } = await github.rest.issues.listComments({
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           issue_number: context.issue.number,
+      #       });
+      #       const botComment = comments.find(comment => {
+      #           return comment.user.type === 'Bot' && comment.body.includes('Terraform Module Release');
+      #       });
 
-            if( '${{ steps.pr_details.outputs.label_error }}' != '') {
-              output += "\n\n### PR Label error\n\n${{ steps.pr_details.outputs.label_error }}"
-            }
+      #       let output = "## Terraform Module Release";
 
-            if( '${{ steps.pr_details.outputs.path_error }}' != '') {
-              output += "\n\n### PR Path error\n\n${{ steps.pr_details.outputs.path_error }}"
-            }
+      #       if( '${{ steps.pr_details.outputs.label_error }}' != '') {
+      #         output += "\n\n### PR Label error\n\n${{ steps.pr_details.outputs.label_error }}"
+      #       }
 
-            output += `\n\n*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
+      #       if( '${{ steps.pr_details.outputs.path_error }}' != '') {
+      #         output += "\n\n### PR Path error\n\n${{ steps.pr_details.outputs.path_error }}"
+      #       }
 
-            if (botComment) {
-                github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: output
-                })
-            } else {
-                github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output
-                })
-            }
+      #       output += `\n\n*Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`, Run SHA: ${process.env.COMMIT_SHA.substring(0, 7)}*`;
 
-            core.setFailed("Fail on invalid PR details");
+      #       if (botComment) {
+      #           github.rest.issues.updateComment({
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           comment_id: botComment.id,
+      #           body: output
+      #           })
+      #       } else {
+      #           github.rest.issues.createComment({
+      #           issue_number: context.issue.number,
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           body: output
+      #           })
+      #       }
+
+      #       core.setFailed("Fail on invalid PR details");
       
       - name: Install terraform
         uses: hashicorp/setup-terraform@v3
