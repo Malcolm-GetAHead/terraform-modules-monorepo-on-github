@@ -54,9 +54,11 @@ jobs:
 
           if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
             echo "Found Dirs: $CHANGED_DIRS"
-            echo "CHANGED_DIRS=<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGED_DIRS" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            {
+              echo "CHANGED_DIRS=<<EOF"
+              echo "$CHANGED_DIRS"
+              echo "EOF"
+            }  >> $GITHUB_OUTPUT
             echo "path_error="  >> $GITHUB_OUTPUT
           else
             echo "path_error=No Directories found in changed paths" >> $GITHUB_OUTPUT
