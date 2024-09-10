@@ -40,7 +40,7 @@ jobs:
           NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
           
           if [ "$NUMBER_OF_LABELS" -eq "1" ] ; then
-            echo "Found: $LABELS"
+            echo "Found label: $LABELS"
             echo "release_type=$LABELS" >> $GITHUB_OUTPUT
             echo "label_error=" >> $GITHUB_OUTPUT
           elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
@@ -50,7 +50,8 @@ jobs:
           fi
 
           if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
-            echo "release-type=$LABELS" >> $GITHUB_OUTPUT
+            echo "Found Dirs: $CHANGED_DIRS"
+            echo "CHANGED_DIRS=$CHANGED_DIRS" >> $GITHUB_OUTPUT
             echo "path_error="  >> $GITHUB_OUTPUT
           else
             echo "path_error=No Directories found in change path" >> $GITHUB_OUTPUT
