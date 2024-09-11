@@ -351,31 +351,31 @@ jobs:
               fi
             done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            # output=$(printf "%s\n" "${trivy_scan[@]}")
-            # ignored=""
-            # for key in "${!trivy_ignored[@]}"; do
-            #   if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-            #     ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
-            #   fi
-            # done
+            output=$(printf "%s\n" "${trivy_scan[@]}")
+            ignored=""
+            for key in "${!trivy_ignored[@]}"; do
+              if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+                ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
+              fi
+            done
 
-            # if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-            #   rtn_chk=1
-            # fi
+            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-            # echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            # {
-            #   echo "output<<EOF"
-            #   echo "$output"
-            #   echo "EOF"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
 
-            #   echo "ignored<<EOF"
-            #   echo -e "$ignored"
-            #   echo "EOF"
-            # }  >> "$GITHUB_OUTPUT"
+              echo "ignored<<EOF"
+              echo -e "$ignored"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-            # echo "Exit: ${rtn_chk}"
-            # echo "Ignored: ${ignored}"
+            echo "Exit: ${rtn_chk}"
+            echo "Ignored: ${ignored}"
             echo "Output: ${output}"
 
       - name: Fail on Trivy security scan
