@@ -6,3 +6,5 @@ curl -sL -o - "$(curl -s "https://api.github.com/repos/aquasecurity/trivy/releas
     tar -C "${WS_DIR}/.local/bin" -xzf - trivy
 
 trivy fs --cache-dir "$WS_DIR/.cache/trivy" --download-db-only
+
+which trivy

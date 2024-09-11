@@ -55,6 +55,7 @@ jobs:
             for x in "${{ github.workspace }}"/.github/dependencies/*sh; do
               echo "Running: ${x}"
               $x
+              echo "---"
             done
         if: steps.tf-tools-cache.outputs.cache-hit != 'true'
         env:

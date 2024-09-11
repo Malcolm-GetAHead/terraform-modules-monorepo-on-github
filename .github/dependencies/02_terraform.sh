@@ -6,3 +6,5 @@ curl -o /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${VERSION}/
 unzip -j -d "${WS_DIR}/.local/bin" terraform.zip
 rm tmp/terraform.zip
 mkdir "$TF_PLUGIN_CACHE_DIR"
+
+which terraform

@@ -7,3 +7,5 @@ curl -sL -o /tmp/tflint.zip "$(curl -s "https://api.github.com/repos/terraform-l
   && rm /tmp/tflint.zip
 
 tflint --init -c "${WS_DIR}/.github/dependencies/tflint.hcl"
+
+which tflint
