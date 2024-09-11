@@ -352,13 +352,13 @@ jobs:
             output=""
             for key in "${!trivy_scan[@]}"; do
               if [ "$(echo "${trivy_scan[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                output+="### Module: $key \n${trivy_scan[$key]}\n\n"
+                output+="<h3>Module: $key</h3> \n${trivy_scan[$key]}\n\n"
               fi
             done
             ignored=""
             for key in "${!trivy_ignored[@]}"; do
               if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="### Module: $key \n${trivy_ignored[$key]}\n\n"
+                ignored+="<h3>Module: $key</h3> \n${trivy_ignored[$key]}\n\n"
               fi
             done
 
