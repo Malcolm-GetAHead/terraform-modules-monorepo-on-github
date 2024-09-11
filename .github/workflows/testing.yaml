@@ -31,6 +31,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: CICD Start PR comment
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              :rocket: CICD Run Initilized!
+
       - name: Get PR Labels and changed dirs
         id: pr_details
         uses: ./.github/actions/pr-details
