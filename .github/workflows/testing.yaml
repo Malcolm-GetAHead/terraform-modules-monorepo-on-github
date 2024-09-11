@@ -15,9 +15,8 @@ on:
       - closed
 
 env:
-  TF_PLUGIN_CACHE_DIR: "${{ github.workspace }}/.cache/terraform"
-  TF_LINT_CACHE_DIR: "${{ github.workspace }}/.cache/tflint"
-  terraform_version: 1.9.5
+  TF_PLUGIN_CACHE_DIR: "${{ github.workspace }}/.terraform/cache"
+  TFLINT_PLUGIN_DIR: "${{ github.workspace }}/.cache/tflint"
   is-merge-event: >-
     ${{ github.event_name == 'pull_request_target'
      && github.event.action == 'closed'
@@ -30,6 +29,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Run Cache
+        uses: actions/cache@v4
+        id: tf-tools-cache
+        with:
+          path: |
+            ${{ github.workspace }}/.cache
+            ${{ github.workspace }}/.local/bin
+          key: tfcache-${{ hashFiles('.github/dependencies/*') }}
+
+      - name: Run Cache
+        uses: actions/cache@v4
+        id: tf-cache
+        with:
+          path: |
+            ${{ env.TF_PLUGIN_CACHE_DIR}}
+          key: tfcache-${{ hashFiles('**/providers.tf', '**/versions.tf') }}
+
+      - name: Create cache dir
+        run: mkdir -p "${{ github.workspace }}/.cache" "${{ env.TF_PLUGIN_CACHE_DIR }}" "${{ env.TFLINT_PLUGIN_DIR }}"
+
+      - name: TF Dependencies
+        run: |
+            for x in "${{ github.workspace }}/.github/dependencies/*sh"; do
+              echo "Running: ${x}"
+              $x
+            done
+        if: steps.tf-tools-cache.outputs.cache-hit != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WS_DIR: ${{ github.workspace }}
+          TFLINT_PLUGIN_DIR: ${{ env.TFLINT_PLUGIN_DIR }}
 
       - name: CICD Start PR comment
         uses: ./.github/actions/pr-comment
@@ -63,14 +94,6 @@ jobs:
               ## Terraform Module Release
               ${{ steps.pr_details.outputs.label_error }}
               ${{ steps.pr_details.outputs.path_error }}
-
-      - name: Install terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.terraform_version }}
-
-      - name: Create cache dir
-        run: mkdir -p "${{ github.workspace }}/.cache/terraform"
 
       - name: Terraform Format
         id: tf_format
@@ -239,23 +262,6 @@ jobs:
               ${{ steps.tf_validate.outputs.output }}
               ```
               </details>
-
-      - name: TFLintCache plugin dir
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.TF_LINT_CACHE_DIR }}
-          key: tflint-${{ hashFiles('.tflint.hcl') }}
-  
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v4
-        with:
-          tflint_version: v0.53.0
-      
-      - name: TFLint Init
-        run: tflint --init -c "${{ github.workspace }}/.tflint.hcl"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       
       - name: TF Lint
         id: tf_lint
@@ -265,7 +271,7 @@ jobs:
 
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
-                rtn_val="$(tflint -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
+                rtn_val="$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
                 tf_lint+=("$rtn_val")
               else
                 tf_lint+=("Unable to check directory: '${tf_dir}'")
@@ -309,3 +315,34 @@ jobs:
               ${{ steps.tf_lint.outputs.output }}
               ```
               </details>
+
+      # - name: Trivy config scan
+      #   id: trivy
+      #   run: |
+      #       declare -a trivy_scan
+      #       rtn_chk=0
+
+      #       while read -r tf_dir; do
+      #         if [ -d "$tf_dir" ]; then
+      #           rtn_val="$(tflint -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
+      #           tf_lint+=("$rtn_val")
+      #         else
+      #           tf_lint+=("Unable to check directory: '${tf_dir}'")
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+
+      #       output=$(printf "%s\n" "${tf_lint[@]}")
+
+      #       if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+      #         rtn_chk=1
+      #       fi
+
+      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "output<<EOF"
+      #         echo "$output"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
+
+      #       echo "Exit: ${rtn_chk}"
+      #       echo "Output: ${output}"
