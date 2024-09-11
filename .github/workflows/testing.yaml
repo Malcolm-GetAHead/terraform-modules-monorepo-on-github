@@ -337,10 +337,9 @@ jobs:
             declare -A trivy_ignored
             rtn_chk=0
             
-            which trivy
+            which checkov
             
             while read -r tf_dir; do
-              echo $tf_dir
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
@@ -355,6 +354,53 @@ jobs:
             for key in "${!trivy_ignored[@]}"; do
               if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
                 ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
+              fi
+            done
+
+            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
+
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+
+              echo "ignored<<EOF"
+              echo -e "$ignored"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+
+            echo "Exit: ${rtn_chk}"
+            echo -e "Ignored: ${ignored}"
+            echo "Output: ${output}"
+
+      - name: Checkov scan
+        id: checkov
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            declare -a checkov_scan
+            declare -A checkov_ignored
+            rtn_chk=0
+            
+            which checkov
+            
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
+                checkov_scan+=("$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results')")
+              else
+                checkov_scan+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+            output=$(printf "%s\n" "${checkov_scan[@]}")
+            ignored=""
+            for key in "${!checkov_ignored[@]}"; do
+              if [ "$(echo "${checkov_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+                ignored+="Module: $key \n${checkov_ignored[$key]}\n\n"
               fi
             done
 
