@@ -30,7 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Cache
+      - name: Terraform Tools Cache
         uses: actions/cache@v4
         id: tf-tools-cache
         with:
@@ -39,7 +39,7 @@ jobs:
             ${{ github.workspace }}/.local/bin
           key: tfcache-${{ hashFiles('.github/dependencies/*') }}
 
-      - name: Run Cache
+      - name: Terraform Plugin Cache
         uses: actions/cache@v4
         id: tf-cache
         with:
@@ -52,7 +52,7 @@ jobs:
 
       - name: TF Dependencies
         run: |
-            export PATH="${{ github.workspace }}"/.local/bin:$PATH"
+            export PATH="${{ github.workspace }}/.local/bin:${PATH}"
             for x in "${{ github.workspace }}"/.github/dependencies/*sh; do
               echo "Running: ${x}"
               $x
