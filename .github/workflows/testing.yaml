@@ -66,17 +66,17 @@ jobs:
           WS_DIR: ${{ github.workspace }}
           TFLINT_PLUGIN_DIR: ${{ env.TFLINT_PLUGIN_DIR }}
 
-      - name: CICD Start PR comment
-        uses: ./.github/actions/pr-comment
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
+      # - name: CICD Start PR comment
+      #   uses: ./.github/actions/pr-comment
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     commit_sha: ${{ github.event.after }}
+      #     update_existing: true
+      #     comment_capture: '## Terraform Module Release'
+      #     comment: |
+      #         ## Terraform Module Release
 
-              :rocket: CICD Run Initilized!
+      #         :rocket: CICD Run Initilized!
 
       - name: Get PR Labels and changed dirs
         id: pr_details
@@ -85,300 +85,55 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           pr_url: ${{github.event.pull_request.html_url}}
           
-      - name: Fail on invalid PR details
-        uses: ./.github/actions/pr-comment
-        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-              ${{ steps.pr_details.outputs.label_error }}
-              ${{ steps.pr_details.outputs.path_error }}
-
-      - name: Terraform Format
-        id: tf_format
-        run: |
-          declare -a tf_fmt
-          rtn_chk=0
-
-          which terraform
-
-          while read -r tf_dir; do
-            if [ -d "$tf_dir" ]; then
-              tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir" 2>&1)")
-            else
-              tf_fmt+=("Unable to check directory: '${tf_dir}'")
-            fi
-          done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
-          
-          output=$(printf "%s\n" "${tf_fmt[@]}")
-
-          if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
-            rtn_chk=1
-          fi
-          
-          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-          {
-            echo "output<<EOF"
-            echo "$output"
-            echo "EOF"
-          }  >> $GITHUB_OUTPUT
-
-          echo "Exit: ${rtn_chk}"
-          echo "Output: ${output}"
-
-      - name: Fail on invalid TF Format
-        uses: ./.github/actions/pr-comment
-        if: steps.tf_format.outputs.exit != 0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-
-              <details>
-              <summary>
-              ### Terraform Format Error
-              </summary>
-              
-              ```diff
-              ${{ steps.tf_format.outputs.output }}
-              ```
-              </details>
-
-      - name: Terraform Init
-        id: tf_init
-        run: |
-            declare -a tf_init
-            rtn_chk=0
-            init_dir=$(pwd)
-
-            which terraform
-
-            while read -r tf_dir; do
-              if [ -d "$init_dir/$tf_dir" ]; then
-                cd "$init_dir/$tf_dir" || exit 1
-              
-                rtn_val="$(terraform init -backend=false -no-color 2>&1 || true)"
-                if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
-                  tf_init+=("$rtn_val")
-                fi
-              else
-                tf_init+=("Unable to check directory: '${tf_dir}'")
-              fi
-            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
-
-            output=$(printf "%s\n" "${tf_init[@]}")
-
-            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-              rtn_chk=1
-            fi
-
-            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            {
-              echo "output<<EOF"
-              echo "$output"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
-
-            echo "Exit: ${rtn_chk}"
-            echo "Output: ${output}"
-
-      - name: Fail on invalid TF Init
-        uses: ./.github/actions/pr-comment
-        if: steps.tf_init.outputs.exit != 0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-
-              <details>
-              <summary>
-              ### Terraform Init Error
-              </summary>
-              
-              ```
-              ${{ steps.tf_init.outputs.output }}
-              ```
-              </details>
-
-      - name: Terraform Validate
-        id: tf_validate
-        run: |
-            declare -a tf_val
-            rtn_chk=0
-            init_dir=$(pwd)
-
-            which terraform
-
-            while read -r tf_dir; do
-              if [ -d "$init_dir/$tf_dir" ]; then
-                cd "$init_dir/$tf_dir" || exit 1
-              
-                rtn_val="$(terraform validate -no-color 2>&1 || true)"
-                if ! grep -q 'The configuration is valid' <<< "$rtn_val"; then
-                  tf_val+=("$rtn_val")
-                fi
-              else
-                tf_val+=("Unable to check directory: '${tf_dir}'")
-              fi
-            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
-
-            output=$(printf "%s\n" "${tf_val[@]}")
-
-            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-              rtn_chk=1
-            fi
-
-            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            {
-              echo "output<<EOF"
-              echo "$output"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
-
-            echo "Exit: ${rtn_chk}"
-            echo "Output: ${output}"
-
-      - name: Fail on invalid TF Validate
-        uses: ./.github/actions/pr-comment
-        if: steps.tf_validate.outputs.exit != 0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-
-              <details>
-              <summary>
-              ### Terraform Validate Error
-              </summary>
-              
-              ```
-              ${{ steps.tf_validate.outputs.output }}
-              ```
-              </details>
-      
-      - name: TF Lint
-        id: tf_lint
-        run: |
-            declare -a tf_lint
-            rtn_chk=0
-
-            which tflint
-
-            while read -r tf_dir; do
-              if [ -d "$tf_dir" ]; then
-                tf_lint+=("$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)")
-              else
-                tf_lint+=("Unable to check directory: '${tf_dir}'")
-              fi
-            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
-
-            output=$(printf "%s\n" "${tf_lint[@]}")
-
-            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-              rtn_chk=1
-            fi
-
-            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            {
-              echo "output<<EOF"
-              echo "$output"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
-
-            echo "Exit: ${rtn_chk}"
-            echo "Output: ${output}"
-
-      - name: Fail on invalid TFlint
-        uses: ./.github/actions/pr-comment
-        if: steps.tf_lint.outputs.exit != 0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-
-              <details>
-              <summary>
-              ### TFLint Error
-              </summary>
-              
-              ```
-              ${{ steps.tf_lint.outputs.output }}
-              ```
-              </details>
-
-      # - name: Trivy config scan
-      #   id: trivy
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #       set -o xtrace
-      #       declare -a trivy_scan
-      #       declare -A trivy_ignored
-      #       rtn_chk=0
-            
-      #       which trivy
-            
-      #       while read -r tf_dir; do
-      #         if [ -d "$tf_dir" ]; then
-      #           rtn_val="$(trivy config "${tf_dir}" 2>&1 || true)"
-      #           trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
-      #           trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
-      #         else
-      #           trivy_scan+=("Unable to check directory: '${tf_dir}'")
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
-
-      #       output=$(printf "%s\n" "${trivy_scan[@]}")
-      #       ignored=""
-      #       for key in "${!trivy_ignored[@]}"; do
-      #         if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-      #           ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
-      #         fi
-      #       done
-
-      #       if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
-
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo "$output"
-      #         echo "EOF"
-
-      #         echo "ignored<<EOF"
-      #         echo -e "$ignored"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
-
-      #       echo "Exit: ${rtn_chk}"
-      #       echo "Ignored: ${ignored}"
-      #       echo "Output: ${output}"
-
-      # - name: Fail on Trivy security scan
+      # - name: Fail on invalid PR details
       #   uses: ./.github/actions/pr-comment
-      #   if: steps.trivy.outputs.exit != 0
+      #   if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     commit_sha: ${{ github.event.after }}
+      #     fail_run: true
+      #     update_existing: true
+      #     comment_capture: '## Terraform Module Release'
+      #     comment: |
+      #         ## Terraform Module Release
+      #         ${{ steps.pr_details.outputs.label_error }}
+      #         ${{ steps.pr_details.outputs.path_error }}
+
+      # - name: Terraform Format
+      #   id: tf_format
+      #   run: |
+      #     declare -a tf_fmt
+      #     rtn_chk=0
+
+      #     which terraform
+
+      #     while read -r tf_dir; do
+      #       if [ -d "$tf_dir" ]; then
+      #         tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir" 2>&1)")
+      #       else
+      #         tf_fmt+=("Unable to check directory: '${tf_dir}'")
+      #       fi
+      #     done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+          
+      #     output=$(printf "%s\n" "${tf_fmt[@]}")
+
+      #     if [ "$(echo $output | tr -d '\s' | tr -d '\n')" != "" ]; then
+      #       rtn_chk=1
+      #     fi
+          
+      #     echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
+      #     {
+      #       echo "output<<EOF"
+      #       echo "$output"
+      #       echo "EOF"
+      #     }  >> $GITHUB_OUTPUT
+
+      #     echo "Exit: ${rtn_chk}"
+      #     echo "Output: ${output}"
+
+      # - name: Fail on invalid TF Format
+      #   uses: ./.github/actions/pr-comment
+      #   if: steps.tf_format.outputs.exit != 0
       #   with:
       #     token: ${{ secrets.GITHUB_TOKEN }}
       #     commit_sha: ${{ github.event.after }}
@@ -390,10 +145,255 @@ jobs:
 
       #         <details>
       #         <summary>
-      #         ### Trivy scan results
+      #         ### Terraform Format Error
+      #         </summary>
+              
+      #         ```diff
+      #         ${{ steps.tf_format.outputs.output }}
+      #         ```
+      #         </details>
+
+      # - name: Terraform Init
+      #   id: tf_init
+      #   run: |
+      #       declare -a tf_init
+      #       rtn_chk=0
+      #       init_dir=$(pwd)
+
+      #       which terraform
+
+      #       while read -r tf_dir; do
+      #         if [ -d "$init_dir/$tf_dir" ]; then
+      #           cd "$init_dir/$tf_dir" || exit 1
+              
+      #           rtn_val="$(terraform init -backend=false -no-color 2>&1 || true)"
+      #           if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
+      #             tf_init+=("$rtn_val")
+      #           fi
+      #         else
+      #           tf_init+=("Unable to check directory: '${tf_dir}'")
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+      #       output=$(printf "%s\n" "${tf_init[@]}")
+
+      #       if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+      #         rtn_chk=1
+      #       fi
+
+      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "output<<EOF"
+      #         echo "$output"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
+
+      #       echo "Exit: ${rtn_chk}"
+      #       echo "Output: ${output}"
+
+      # - name: Fail on invalid TF Init
+      #   uses: ./.github/actions/pr-comment
+      #   if: steps.tf_init.outputs.exit != 0
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     commit_sha: ${{ github.event.after }}
+      #     fail_run: true
+      #     update_existing: true
+      #     comment_capture: '## Terraform Module Release'
+      #     comment: |
+      #         ## Terraform Module Release
+
+      #         <details>
+      #         <summary>
+      #         ### Terraform Init Error
       #         </summary>
               
       #         ```
-      #         ${{ steps.trivy.outputs.output }}
+      #         ${{ steps.tf_init.outputs.output }}
       #         ```
       #         </details>
+
+      # - name: Terraform Validate
+      #   id: tf_validate
+      #   run: |
+      #       declare -a tf_val
+      #       rtn_chk=0
+      #       init_dir=$(pwd)
+
+      #       which terraform
+
+      #       while read -r tf_dir; do
+      #         if [ -d "$init_dir/$tf_dir" ]; then
+      #           cd "$init_dir/$tf_dir" || exit 1
+              
+      #           rtn_val="$(terraform validate -no-color 2>&1 || true)"
+      #           if ! grep -q 'The configuration is valid' <<< "$rtn_val"; then
+      #             tf_val+=("$rtn_val")
+      #           fi
+      #         else
+      #           tf_val+=("Unable to check directory: '${tf_dir}'")
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+      #       output=$(printf "%s\n" "${tf_val[@]}")
+
+      #       if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+      #         rtn_chk=1
+      #       fi
+
+      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "output<<EOF"
+      #         echo "$output"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
+
+      #       echo "Exit: ${rtn_chk}"
+      #       echo "Output: ${output}"
+
+      # - name: Fail on invalid TF Validate
+      #   uses: ./.github/actions/pr-comment
+      #   if: steps.tf_validate.outputs.exit != 0
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     commit_sha: ${{ github.event.after }}
+      #     fail_run: true
+      #     update_existing: true
+      #     comment_capture: '## Terraform Module Release'
+      #     comment: |
+      #         ## Terraform Module Release
+
+      #         <details>
+      #         <summary>
+      #         ### Terraform Validate Error
+      #         </summary>
+              
+      #         ```
+      #         ${{ steps.tf_validate.outputs.output }}
+      #         ```
+      #         </details>
+      
+      # - name: TF Lint
+      #   id: tf_lint
+      #   run: |
+      #       declare -a tf_lint
+      #       rtn_chk=0
+
+      #       which tflint
+
+      #       while read -r tf_dir; do
+      #         if [ -d "$tf_dir" ]; then
+      #           tf_lint+=("$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)")
+      #         else
+      #           tf_lint+=("Unable to check directory: '${tf_dir}'")
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+      #       output=$(printf "%s\n" "${tf_lint[@]}")
+
+      #       if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+      #         rtn_chk=1
+      #       fi
+
+      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "output<<EOF"
+      #         echo "$output"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
+
+      #       echo "Exit: ${rtn_chk}"
+      #       echo "Output: ${output}"
+
+      # - name: Fail on invalid TFlint
+      #   uses: ./.github/actions/pr-comment
+      #   if: steps.tf_lint.outputs.exit != 0
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     commit_sha: ${{ github.event.after }}
+      #     fail_run: true
+      #     update_existing: true
+      #     comment_capture: '## Terraform Module Release'
+      #     comment: |
+      #         ## Terraform Module Release
+
+      #         <details>
+      #         <summary>
+      #         ### TFLint Error
+      #         </summary>
+              
+      #         ```
+      #         ${{ steps.tf_lint.outputs.output }}
+      #         ```
+      #         </details>
+
+      - name: Trivy config scan
+        id: trivy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            set -o xtrace
+            declare -a trivy_scan
+            declare -A trivy_ignored
+            rtn_chk=0
+            
+            which trivy
+            
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                rtn_val="$(trivy config "${tf_dir}" 2>&1 || true)"
+                trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
+                trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
+              else
+                trivy_scan+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+            output=$(printf "%s\n" "${trivy_scan[@]}")
+            ignored=""
+            for key in "${!trivy_ignored[@]}"; do
+              if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+                ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
+              fi
+            done
+
+            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
+
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+
+              echo "ignored<<EOF"
+              echo -e "$ignored"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+
+            echo "Exit: ${rtn_chk}"
+            echo "Ignored: ${ignored}"
+            echo "Output: ${output}"
+
+      - name: Fail on Trivy security scan
+        uses: ./.github/actions/pr-comment
+        if: steps.trivy.outputs.exit != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              <details>
+              <summary>
+              ### Trivy scan results
+              </summary>
+              
+              ```
+              ${{ steps.trivy.outputs.output }}
+              ```
+              </details>
