@@ -340,6 +340,7 @@ jobs:
             which trivy
             
             while read -r tf_dir; do
+              echo $tf_dir
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
