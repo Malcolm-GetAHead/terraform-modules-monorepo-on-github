@@ -329,8 +329,9 @@ jobs:
 
       - name: Trivy config scan
         id: trivy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            set -o xtrace
             declare -a trivy_scan
             declare -A trivy_ignored
             rtn_chk=0
@@ -371,6 +372,7 @@ jobs:
             }  >> "$GITHUB_OUTPUT"
 
             echo "Exit: ${rtn_chk}"
+            echo "Ignored: ${ignored}"
             echo "Output: ${output}"
 
       - name: Fail on Trivy security scan
