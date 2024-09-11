@@ -146,7 +146,7 @@ jobs:
 
       #         <details>
       #         <summary>
-      #         ### Terraform Format Error
+      #         <h3>Terraform Format Error</h3>
       #         </summary>
               
       #         ```diff
@@ -206,7 +206,7 @@ jobs:
 
       #         <details>
       #         <summary>
-      #         ### Terraform Init Error
+      #         <h3>Terraform Init Error</h3>
       #         </summary>
               
       #         ```
@@ -266,7 +266,7 @@ jobs:
 
       #         <details>
       #         <summary>
-      #         ### Terraform Validate Error
+      #         <h3>Terraform Validate Error</h3>
       #         </summary>
               
       #         ```
@@ -320,7 +320,7 @@ jobs:
 
       #         <details>
       #         <summary>
-      #         ### TFLint Error
+      #         <h3>TFLint Error</h3>
       #         </summary>
               
       #         ```
@@ -343,7 +343,7 @@ jobs:
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
-                trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' || true)"
+                trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' || true)"
               else
                 trivy_scan["$tf_dir"]="  Unable to check directory"
               fi
@@ -358,7 +358,7 @@ jobs:
             ignored=""
             for key in "${!trivy_ignored[@]}"; do
               if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
+                ignored+="#### Module: $key \n${trivy_ignored[$key]}\n\n"
               fi
             done
 
@@ -410,7 +410,7 @@ jobs:
             ignored=""
             for key in "${!checkov_ignored[@]}"; do
               if [ "$(echo "${checkov_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="Module: $key \n${checkov_ignored[$key]}\n\n"
+                ignored+="#### Module: $key \n${checkov_ignored[$key]}\n\n"
               fi
             done
 
@@ -447,14 +447,14 @@ jobs:
 
               <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
               <summary>
-              ### Trivy scan results
+              <h3>Trivy scan results</h3>
               </summary>
               ${{ steps.trivy.outputs.output }}
               </details${{ steps.trivy.outputs.exit == 0 && '--' || '' }}>
 
               <${{ steps.checkov.outputs.exit == 0 && '!--' || '' }}details>
               <summary>
-              ### Checkov scan results
+              <h3>Checkov scan results</h3>
               </summary>
               ${{ steps.checkov.outputs.output }}
               </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
