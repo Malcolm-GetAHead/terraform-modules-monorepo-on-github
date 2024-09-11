@@ -330,6 +330,7 @@ jobs:
       - name: Trivy config scan
         id: trivy
         run: |
+            set -o xtrace
             declare -a trivy_scan
             declare -A trivy_ignored
             rtn_chk=0
@@ -365,9 +366,9 @@ jobs:
               echo "EOF"
 
               echo "ignored<<EOF"
-              echo "$ignored"
+              echo -e "$ignored"
               echo "EOF"
-            }
+            }  >> "$GITHUB_OUTPUT"
 
             echo "Exit: ${rtn_chk}"
             echo "Output: ${output}"
