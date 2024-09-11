@@ -79,6 +79,10 @@ jobs:
 
               :rocket: CICD Run Initilized!
 
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |||||||
+
       - name: Get PR Labels and changed dirs
         id: pr_details
         uses: ./.github/actions/pr-details
@@ -144,6 +148,10 @@ jobs:
           comment: |
               ## Terraform Module Release
 
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |❌||||||
+
               <details>
               <summary>
               <h3>Terraform Format Error</h3>
@@ -203,6 +211,10 @@ jobs:
           comment_capture: '## Terraform Module Release'
           comment: |
               ## Terraform Module Release
+
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|❌|||||
 
               <details>
               <summary>
@@ -264,6 +276,10 @@ jobs:
           comment: |
               ## Terraform Module Release
 
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|❌||||
+
               <details>
               <summary>
               <h3>Terraform Validate Error</h3>
@@ -317,6 +333,10 @@ jobs:
           comment_capture: '## Terraform Module Release'
           comment: |
               ## Terraform Module Release
+
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|❌|||
 
               <details>
               <summary>
@@ -445,6 +465,10 @@ jobs:
           comment: |
               ## Terraform Module Release
 
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|✅|${{ steps.trivy.outputs.exit == 0 && '✅' || '❌' }}|${{ steps.checkov.outputs.exit == 0 && '✅' || '❌' }}|
+
               <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
               <summary>
               <h3>Trivy scan results</h3>
@@ -471,9 +495,9 @@ jobs:
 
               ✨ CICD Run Completed successfully!
 
-              |Terraform|Format|Init|Validate|Lint|
-              |-|-|-|-|-|
-              ||✅|✅|✅|✅|
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|✅|✅|✅|
 
               <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
               <summary>
