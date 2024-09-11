@@ -52,6 +52,7 @@ jobs:
 
       - name: TF Dependencies
         run: |
+            export PATH="${{ github.workspace }}"/.local/bin:$PATH"
             for x in "${{ github.workspace }}"/.github/dependencies/*sh; do
               echo "Running: ${x}"
               $x
