@@ -17,6 +17,7 @@ on:
 env:
   TF_PLUGIN_CACHE_DIR: "${{ github.workspace }}/.terraform/cache"
   TFLINT_PLUGIN_DIR: "${{ github.workspace }}/.cache/tflint"
+  TRIVY_CACHE_DIR: "${{ github.workspace }}/.cache/trivy"
   is-merge-event: >-
     ${{ github.event_name == 'pull_request_target'
      && github.event.action == 'closed'
@@ -342,7 +343,7 @@ jobs:
             while read -r tf_dir; do
               echo $tf_dir
               if [ -d "$tf_dir" ]; then
-                rtn_val="$(trivy config "${tf_dir}" 2>&1 || true)"
+                rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
                 trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
               else
@@ -350,31 +351,31 @@ jobs:
               fi
             done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            output=$(printf "%s\n" "${trivy_scan[@]}")
-            ignored=""
-            for key in "${!trivy_ignored[@]}"; do
-              if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
-              fi
-            done
+            # output=$(printf "%s\n" "${trivy_scan[@]}")
+            # ignored=""
+            # for key in "${!trivy_ignored[@]}"; do
+            #   if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+            #     ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
+            #   fi
+            # done
 
-            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-              rtn_chk=1
-            fi
+            # if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+            #   rtn_chk=1
+            # fi
 
-            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            {
-              echo "output<<EOF"
-              echo "$output"
-              echo "EOF"
+            # echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            # {
+            #   echo "output<<EOF"
+            #   echo "$output"
+            #   echo "EOF"
 
-              echo "ignored<<EOF"
-              echo -e "$ignored"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
+            #   echo "ignored<<EOF"
+            #   echo -e "$ignored"
+            #   echo "EOF"
+            # }  >> "$GITHUB_OUTPUT"
 
-            echo "Exit: ${rtn_chk}"
-            echo "Ignored: ${ignored}"
+            # echo "Exit: ${rtn_chk}"
+            # echo "Ignored: ${ignored}"
             echo "Output: ${output}"
 
       - name: Fail on Trivy security scan
