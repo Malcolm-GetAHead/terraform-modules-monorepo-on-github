@@ -103,6 +103,8 @@ jobs:
           declare -a tf_fmt
           rtn_chk=0
 
+          which terraform
+
           while read -r tf_dir; do
             if [ -d "$tf_dir" ]; then
               tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir" 2>&1)")
@@ -155,6 +157,8 @@ jobs:
             declare -a tf_init
             rtn_chk=0
             init_dir=$(pwd)
+
+            which terraform
 
             while read -r tf_dir; do
               if [ -d "$init_dir/$tf_dir" ]; then
@@ -214,6 +218,8 @@ jobs:
             rtn_chk=0
             init_dir=$(pwd)
 
+            which terraform
+
             while read -r tf_dir; do
               if [ -d "$init_dir/$tf_dir" ]; then
                 cd "$init_dir/$tf_dir" || exit 1
@@ -271,9 +277,11 @@ jobs:
             declare -a tf_lint
             rtn_chk=0
 
+            which tflint
+
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
-                rtn_val="$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
+                rtn_val="$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
                 tf_lint+=("$rtn_val")
               else
                 tf_lint+=("Unable to check directory: '${tf_dir}'")
