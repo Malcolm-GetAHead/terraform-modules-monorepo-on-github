@@ -47,12 +47,13 @@ jobs:
             ${{ env.TF_PLUGIN_CACHE_DIR}}
           key: tfcache-${{ hashFiles('**/providers.tf', '**/versions.tf') }}
 
-      - name: Create cache dir
-        run: mkdir -p "${{ github.workspace }}/.cache" "${{ env.TF_PLUGIN_CACHE_DIR }}" "${{ env.TFLINT_PLUGIN_DIR }}"
+      - name: Cache config
+        run: |
+          echo "${{ github.workspace }}/.local/bin" >> "$GITHUB_PATH"
+          mkdir -p "${{ github.workspace }}/.cache" "${{ env.TF_PLUGIN_CACHE_DIR }}" "${{ env.TFLINT_PLUGIN_DIR }}"
 
       - name: TF Dependencies
         run: |
-            echo "${{ github.workspace }}/.local/bin" >> "$GITHUB_PATH"
             export PATH="${{ github.workspace }}/.local/bin:${PATH}"
             for x in "${{ github.workspace }}"/.github/dependencies/*sh; do
               echo "Running: ${x}"
