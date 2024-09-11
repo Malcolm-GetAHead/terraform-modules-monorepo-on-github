@@ -283,8 +283,7 @@ jobs:
 
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
-                rtn_val="$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
-                tf_lint+=("$rtn_val")
+                tf_lint+=("$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)")
               else
                 tf_lint+=("Unable to check directory: '${tf_dir}'")
               fi
@@ -328,33 +327,56 @@ jobs:
               ```
               </details>
 
-      # - name: Trivy config scan
-      #   id: trivy
-      #   run: |
-      #       declare -a trivy_scan
-      #       rtn_chk=0
+      - name: Trivy config scan
+        id: trivy
+        run: |
+            declare -a trivy_scan
+            rtn_chk=0
 
-      #       while read -r tf_dir; do
-      #         if [ -d "$tf_dir" ]; then
-      #           rtn_val="$(tflint -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
-      #           tf_lint+=("$rtn_val")
-      #         else
-      #           tf_lint+=("Unable to check directory: '${tf_dir}'")
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
+            which trivy
 
-      #       output=$(printf "%s\n" "${tf_lint[@]}")
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                trivy_scan+=("$(trivy config --cache-dir "${{ github.workspace }}/.cache/trivy" "${tf_dir}" 2>&1 || true)")
+              else
+                trivy_scan+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.CHANGED_DIRS }}'
 
-      #       if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            output=$(printf "%s\n" "${trivy_scan[@]}")
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo "$output"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+            if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo "Output: ${output}"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
+
+      - name: Fail on Trivy security scan
+        uses: ./.github/actions/pr-comment
+        if: steps.trivy.outputs.exit != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              <details>
+              <summary>
+              ### Trivy scan results
+              </summary>
+              
+              ```
+              ${{ steps.trivy.outputs.output }}
+              ```
+              </details>
