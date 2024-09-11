@@ -4,6 +4,7 @@ resource "null_resource" "test" {
 }
 
 terraform {
+  required_version = "~> 1.9.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -13,8 +14,4 @@ terraform {
 }
 
 provider "aws" {
-}
-
-resource "aws_fake_resource" "name" {
-  name = "fake"
 }
