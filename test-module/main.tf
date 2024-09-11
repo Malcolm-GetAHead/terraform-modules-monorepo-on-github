@@ -1,7 +1,7 @@
 provider "aws" {
 }
-#trivy:ignore:AVD-AWS-0086
-#trivy:ignore:AVD-AWS-0087
+#tri vy:ignore:AVD-AWS-0086
+#tri vy:ignore:AVD-AWS-0087
 #trivy:ignore:AVD-AWS-0088
 #trivy:ignore:AVD-AWS-0089
 #trivy:ignore:AVD-AWS-0090
@@ -10,8 +10,8 @@ provider "aws" {
 #trivy:ignore:AVD-AWS-0094
 #trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket" "test" {
-  #c heckov:skip=CKV2_AWS_62
-  #c heckov:skip=CKV2_AWS_61
+  #checkov:skip=CKV2_AWS_62
+  #checkov:skip=CKV2_AWS_61
   #checkov:skip=CKV_AWS_144
   #checkov:skip=CKV_AWS_145
   #checkov:skip=CKV_AWS_21
