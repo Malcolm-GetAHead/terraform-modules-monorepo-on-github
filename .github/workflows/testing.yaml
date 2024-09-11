@@ -358,7 +358,7 @@ jobs:
             ignored=""
             for key in "${!trivy_ignored[@]}"; do
               if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="#### Module: $key \n${trivy_ignored[$key]}\n\n"
+                ignored+="### Module: $key \n${trivy_ignored[$key]}\n\n"
               fi
             done
 
@@ -410,7 +410,7 @@ jobs:
             ignored=""
             for key in "${!checkov_ignored[@]}"; do
               if [ "$(echo "${checkov_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="#### Module: $key \n${checkov_ignored[$key]}\n\n"
+                ignored+="### Module: $key \n${checkov_ignored[$key]}\n\n"
               fi
             done
 
