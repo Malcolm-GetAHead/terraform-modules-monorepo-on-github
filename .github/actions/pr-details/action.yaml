@@ -1,5 +1,5 @@
-name: GitHub PR Comment
-description: Create a GitHub Bot comment on a PR
+name: GitHub PR Details
+description: Obtain labels and altered file listing from a GitHub PR
 
 inputs:
   token:

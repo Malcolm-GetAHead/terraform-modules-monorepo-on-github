@@ -1,21 +1,29 @@
-#!/bin/bash
-GITHUB_OUTPUT=ex_output.txt
-  declare -a tf_lint
+GITHUB_OUTPUT="ex_output.txt"
+
+  declare -a trivy_scan
+  declare -A trivy_ignored
   rtn_chk=0
   
-  which tflint
+  which trivy
   
   while read -r tf_dir; do
     if [ -d "$tf_dir" ]; then
-      rtn_val="$(tflint -c "/home/runner/work/terraform-modules-monorepo-on-github/terraform-modules-monorepo-on-github/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
-      tf_lint+=("$rtn_val")
+      rtn_val="$(trivy config "${tf_dir}" 2>&1 || true)"
+      trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
+      trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
     else
-      tf_lint+=("Unable to check directory: '${tf_dir}'")
+      trivy_scan+=("Unable to check directory: '${tf_dir}'")
     fi
   done <<< 'test-module
   test-module1'
   
-  output=$(printf "%s\n" "${tf_lint[@]}")
+  output=$(printf "%s\n" "${trivy_scan[@]}")
+  ignored=""
+  for key in "${!trivy_ignored[@]}"; do
+    if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+      ignored+="Module: $key \n${trivy_ignored[$key]}\n\n"
+    fi
+  done
   
   if [ "$(echo "$output" | tr -d '\s' | tr -d '\n')" != "" ]; then
     rtn_chk=1
@@ -25,6 +33,10 @@ GITHUB_OUTPUT=ex_output.txt
   {
     echo "output<<EOF"
     echo "$output"
+    echo "EOF"
+  
+    echo "ignored<<EOF"
+    echo -e "$ignored"
     echo "EOF"
   }  >> "$GITHUB_OUTPUT"
   
