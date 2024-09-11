@@ -369,7 +369,7 @@ jobs:
             echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
             {
               echo "output<<EOF"
-              echo "$output"
+              echo -e "$output"
               echo "EOF"
 
               echo "ignored<<EOF"
@@ -421,7 +421,7 @@ jobs:
             echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
             {
               echo "output<<EOF"
-              echo "$output"
+              echo -e "$output"
               echo "EOF"
 
               echo "ignored<<EOF"
@@ -445,12 +445,16 @@ jobs:
           comment: |
               ## Terraform Module Release
 
-              <details>
+              <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
               <summary>
               ### Trivy scan results
               </summary>
-              
-              ```
               ${{ steps.trivy.outputs.output }}
-              ```
-              </details>
+              </details${{ steps.trivy.outputs.exit == 0 && '--' || '' }}>
+
+              <${{ steps.checkov.outputs.exit == 0 && '!--' || '' }}details>
+              <summary>
+              ### Checkov scan results
+              </summary>
+              ${{ steps.checkov.outputs.output }}
+              </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
