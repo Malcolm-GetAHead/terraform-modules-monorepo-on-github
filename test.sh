@@ -1,5 +1,6 @@
 GITHUB_OUTPUT="ex_output.txt"
 
+   set -o xtrace
   declare -a trivy_scan
   declare -A trivy_ignored
   rtn_chk=0
@@ -7,6 +8,7 @@ GITHUB_OUTPUT="ex_output.txt"
   which trivy
   
   while read -r tf_dir; do
+    echo $tf_dir
     if [ -d "$tf_dir" ]; then
       rtn_val="$(trivy config "${tf_dir}" 2>&1 || true)"
       trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
@@ -41,4 +43,5 @@ GITHUB_OUTPUT="ex_output.txt"
   }  >> "$GITHUB_OUTPUT"
   
   echo "Exit: ${rtn_chk}"
+  echo "Ignored: ${ignored}"
   echo "Output: ${output}"

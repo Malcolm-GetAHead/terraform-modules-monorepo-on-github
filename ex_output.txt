@@ -4,15 +4,15 @@ output<<EOF
 EOF
 ignored<<EOF
 Module: test-module 
-    Ignore finding	rule="aws-s3-enable-logging" range="main.tf:12-14"
-    Ignore finding	rule="aws-s3-block-public-acls" range="main.tf:12-14"
-    Ignore finding	rule="aws-s3-enable-bucket-encryption" range="main.tf:12-14"
-    Ignore finding	rule="aws-s3-encryption-customer-key" range="main.tf:12-14"
-    Ignore finding	rule="aws-s3-specify-public-access-block" range="main.tf:12-14"
     Ignore finding	rule="aws-s3-block-public-policy" range="main.tf:12-14"
     Ignore finding	rule="aws-s3-enable-versioning" range="main.tf:12-14"
     Ignore finding	rule="aws-s3-ignore-public-acls" range="main.tf:12-14"
+    Ignore finding	rule="aws-s3-specify-public-access-block" range="main.tf:12-14"
+    Ignore finding	rule="aws-s3-block-public-acls" range="main.tf:12-14"
+    Ignore finding	rule="aws-s3-enable-bucket-encryption" range="main.tf:12-14"
+    Ignore finding	rule="aws-s3-encryption-customer-key" range="main.tf:12-14"
     Ignore finding	rule="aws-s3-no-public-buckets" range="main.tf:12-14"
+    Ignore finding	rule="aws-s3-enable-logging" range="main.tf:12-14"
 
 
 EOF
