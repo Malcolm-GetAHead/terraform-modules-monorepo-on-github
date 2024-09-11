@@ -52,7 +52,7 @@ jobs:
 
       - name: TF Dependencies
         run: |
-            for x in "${{ github.workspace }}/.github/dependencies/*sh"; do
+            for x in "${{ github.workspace }}"/.github/dependencies/*sh; do
               echo "Running: ${x}"
               $x
             done
