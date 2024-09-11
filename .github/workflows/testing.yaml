@@ -253,7 +253,7 @@ jobs:
 
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
-                rtn_val="$(tflint -f compact --force --no-module --no-color --chdir "${tf_dir}" 2>&1 || true)"
+                rtn_val="$(tflint -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)"
                 tf_lint+=("$rtn_val")
               else
                 tf_lint+=("Unable to check directory: '${tf_dir}'")
