@@ -156,6 +156,7 @@ jobs:
       - name: Terraform Init
         id: tf_init
         run: |
+            set -o xtrace
             declare -a tf_init
             rtn_chk=0
             init_dir=$(pwd)
