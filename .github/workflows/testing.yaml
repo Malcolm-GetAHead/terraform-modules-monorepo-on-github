@@ -404,13 +404,13 @@ jobs:
             output=""
             for key in "${!checkov_scan[@]}"; do
               if [ "$(echo "${checkov_scan[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                output+="### Module: $key \n${checkov_scan[$key]}\n\n"
+                output+="<h3>Module: $key</h3> \n${checkov_scan[$key]}\n\n"
               fi
             done
             ignored=""
             for key in "${!checkov_ignored[@]}"; do
               if [ "$(echo "${checkov_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
-                ignored+="### Module: $key \n${checkov_ignored[$key]}\n\n"
+                ignored+="<h3>Module: $key</h3> \n${checkov_ignored[$key]}\n\n"
               fi
             done
 
