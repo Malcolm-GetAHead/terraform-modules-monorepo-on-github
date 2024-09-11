@@ -333,7 +333,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            set -o xtrace
             declare -a trivy_scan
             declare -A trivy_ignored
             rtn_chk=0
@@ -344,8 +343,8 @@ jobs:
               echo $tf_dir
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
-                trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
-                # trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
+                trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
+                trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO' || true)")
               else
                 trivy_scan+=("Unable to check directory: '${tf_dir}'")
               fi
@@ -375,7 +374,7 @@ jobs:
             }  >> "$GITHUB_OUTPUT"
 
             echo "Exit: ${rtn_chk}"
-            echo "Ignored: ${ignored}"
+            echo -e "Ignored: ${ignored}"
             echo "Output: ${output}"
 
       - name: Fail on Trivy security scan
