@@ -337,7 +337,9 @@ jobs:
 
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
-                trivy_scan+=("$(trivy config --cache-dir "${{ github.workspace }}/.cache/trivy" "${tf_dir}" 2>&1 || true)")
+                rtn_val="$(trivy config --cache-dir "${{ github.workspace }}/.cache/trivy" "${tf_dir}" 2>&1 || true)"
+                ignored="$(echo "$rtn_val" | grep 'Ignore finding')"
+                trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
               else
                 trivy_scan+=("Unable to check directory: '${tf_dir}'")
               fi
@@ -355,6 +357,11 @@ jobs:
               echo "$output"
               echo "EOF"
             }  >> "$GITHUB_OUTPUT"
+            {
+              echo "ignored<<EOF"
+              echo "$ignored"
+              echo "EOF"
+            }
 
             echo "Exit: ${rtn_chk}"
             echo "Output: ${output}"
