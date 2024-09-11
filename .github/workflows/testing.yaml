@@ -345,7 +345,7 @@ jobs:
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g')"
-                trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
+                # trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO')")
               else
                 trivy_scan+=("Unable to check directory: '${tf_dir}'")
               fi
