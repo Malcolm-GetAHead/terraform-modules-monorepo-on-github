@@ -343,9 +343,9 @@ jobs:
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
-                trivy_scan["$tf_dir"]=("$(echo "$rtn_val" | grep -v 'INFO' || true)")
+                trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' || true)"
               else
-                trivy_scan["$tf_dir"]=("  Unable to check directory")
+                trivy_scan["$tf_dir"]="  Unable to check directory"
               fi
             done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
@@ -395,9 +395,9 @@ jobs:
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
                 checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
-                checkov_scan["$tf_dir"]=("$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results')")
+                checkov_scan["$tf_dir"]="$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results')"
               else
-                checkov_scan["$tf_dir"]=("  Unable to check directory")
+                checkov_scan["$tf_dir"]="  Unable to check directory"
               fi
             done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
