@@ -333,7 +333,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            declare -a trivy_scan
+            declare -A trivy_scan
             declare -A trivy_ignored
             rtn_chk=0
             
@@ -343,13 +343,18 @@ jobs:
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
-                trivy_scan+=("$(echo "$rtn_val" | grep -v 'INFO' || true)")
+                trivy_scan["$tf_dir"]=("$(echo "$rtn_val" | grep -v 'INFO' || true)")
               else
-                trivy_scan+=("Unable to check directory: '${tf_dir}'")
+                trivy_scan["$tf_dir"]=("  Unable to check directory")
               fi
             done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            output=$(printf "%s\n" "${trivy_scan[@]}")
+            output=""
+            for key in "${!trivy_scan[@]}"; do
+              if [ "$(echo "${trivy_scan[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+                output+="Module: $key \n${trivy_scan[$key]}\n\n"
+              fi
+            done
             ignored=""
             for key in "${!trivy_ignored[@]}"; do
               if [ "$(echo "${trivy_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
@@ -381,7 +386,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            declare -a checkov_scan
+            declare -A checkov_scan
             declare -A checkov_ignored
             rtn_chk=0
             
@@ -390,13 +395,18 @@ jobs:
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
                 checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
-                checkov_scan+=("$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results')")
+                checkov_scan["$tf_dir"]=("$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results')")
               else
-                checkov_scan+=("Unable to check directory: '${tf_dir}'")
+                checkov_scan["$tf_dir"]=("  Unable to check directory")
               fi
             done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            output=$(printf "%s\n" "${checkov_scan[@]}")
+            output=""
+            for key in "${!checkov_scan[@]}"; do
+              if [ "$(echo "${checkov_scan[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
+                output+="Module: $key \n${checkov_scan[$key]}\n\n"
+              fi
+            done
             ignored=""
             for key in "${!checkov_ignored[@]}"; do
               if [ "$(echo "${checkov_ignored[$key]}" | tr -d '\s' | tr -d '\n')" != "" ]; then
@@ -423,9 +433,9 @@ jobs:
             echo -e "Ignored: ${ignored}"
             echo "Output: ${output}"
 
-      - name: Fail on Trivy security scan
+      - name: Security scan outputs
         uses: ./.github/actions/pr-comment
-        if: steps.trivy.outputs.exit != 0
+        if: steps.trivy.outputs.exit != 0 && steps.checkov.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
