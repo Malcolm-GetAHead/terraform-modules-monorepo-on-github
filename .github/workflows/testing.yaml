@@ -863,12 +863,12 @@ jobs:
 
               git add .
               git commit -a -m "$message" -m "$description"
-              git tag "$tag" -m "$message" -m "$description"
-              git tag -fa "$majorTag" -m "$message" -m "$description"
-              git tag -fa "$minorTag" -m "$message" -m "$description"
-              git push origin "$tag"
-              git push origin "$minorTag" -f
-              git push origin "$majorTag" -f
+              git tag "$tag_patch" -m "$message" -m "$description"
+              git tag -fa "$tag_major" -m "$message" -m "$description"
+              git tag -fa "$tag_minor" -m "$message" -m "$description"
+              git push origin "$tag_patch"
+              git push origin "$tag_minor" -f
+              git push origin "$tag_major" -f
             fi
           done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
