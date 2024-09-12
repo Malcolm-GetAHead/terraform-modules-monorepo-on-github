@@ -574,7 +574,7 @@ jobs:
               });
               const prevNode = result.repository.refs.edges[0];
               const prevVer = prevNode ? prevNode.node.name.substring(1) : '0.0.0';
-              console.log(`Found previous version ${tf_modules[i]}: prevVer`);
+              console.log(`Found previous version ${tf_modules[i]}: ${prevVer}`);
 
               const newVer = prevVer.split('.');
               const newVerIdx = ['major', 'minor', 'patch'].indexOf("${{ steps.pr_details.outputs.release_label }}");
@@ -582,7 +582,7 @@ jobs:
               for (let i = newVerIdx + 1; i < newVer.length; i++) {
                 newVer[i] = 0;
               }
-              console.log(`Generated new version ${tf_modules[i]}: newVer`);
+              console.log(`Generated new version ${tf_modules[i]}: ${newVer}`);
 
               versions[tf_modules[i]] = {
                 prevVer: prevVer,
@@ -595,7 +595,7 @@ jobs:
               `;
             }
             core.setOutput('versions', versions);
-            core.setOutput('out_string', outstring);
+            core.setOutput('out_string', out_string);
 
       - name: Extract changelog entry
         id: changelog
