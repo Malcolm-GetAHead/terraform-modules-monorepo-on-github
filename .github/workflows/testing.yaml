@@ -663,7 +663,7 @@ jobs:
 
       - name: Test
         run: |
-          echo "${{ steps.version_tags.outputs }}"
-          echo "${{ steps.changelog.outputs }}"
-          echo "${{ steps.source_example.outputs }}"
+          echo "${{ toJson(steps.version_tags.outputs) }}"
+          echo "${{ toJson(steps.changelog.outputs) }}"
+          echo "${{ toJson(steps.source_example.outputs) }}"
 
