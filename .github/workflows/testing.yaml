@@ -861,6 +861,11 @@ jobs:
               mv "${tmp_dir}"/* .
               rm -rf "${tmp_dir}"
 
+              echo "tags:"
+              echo $tag_patch
+              echo $tag_minor
+              echo $tag_major
+
               git add .
               git commit -a -m "$message" -m "$description"
               git tag "$tag_patch" -m "$message" -m "$description"
