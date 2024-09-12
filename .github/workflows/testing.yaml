@@ -510,7 +510,7 @@ jobs:
               if [ -d "${init_dir}/${tf_dir}" ]; then
                 cd "${init_dir}/${tf_dir}"
                 tfplan_output["$tf_dir"]="$(terraform plan -no-color -out tf.plan 2>&1 || true)"
-                compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan 2>&1 | cat || true)"
+                compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' || true)"
               else
                 compliance_scan["$tf_dir"]="  Unable to check directory"
               fi
@@ -526,7 +526,7 @@ jobs:
             plan_output=""
             for key in "${!tfplan_output[@]}"; do
               if [ "$(echo "${tfplan_output[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                output+="<h3>Module: <u>$key</u></h3> \n${tfplan_output[$key]}\n\n"
+                plan_output+="<h3>Module: <u>$key</u></h3> \n${tfplan_output[$key]}\n\n"
               fi
             done
 
@@ -566,18 +566,18 @@ jobs:
               <h3> Terraform Plan </h3>
               </summary>
               <b>Plan is best effort!</b>
-              <pre>
+              ```
               ${{ steps.tf_compliance.outputs.plan_output }}
-              </pre>
+              ```
               </summary>
 
               <summary>
               <h3> Terraform Compliance Check </h3>
               </summary>
               <b>Compliance check is best effort!</b>
-              <pre>
+              ```
               ${{ steps.tf_compliance.outputs.output }}
-              </pre>
+              ```
               </summary>
 
 
