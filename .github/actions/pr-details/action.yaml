@@ -11,17 +11,20 @@ inputs:
 
 outputs:
   release_label:
-    description: ''
+    description: 'Release label attached to PR'
     value: '${{ steps.pr_details.outputs.release_label }}'
   label_error:
-    description: ''
+    description: "Error message if there's an issue obtaining release the label"
     value: '${{ steps.pr_details.outputs.label_error }}'
   changed_dirs:
-    description: ''
+    description: 'List of changed dirs with TF files'
     value: '${{ steps.pr_details.outputs.changed_dirs }}'
   path_error:
-    description: ''
+    description: "Error message if there's an issue obtaining paths of changed TF files"
     value: '${{ steps.pr_details.outputs.path_error }}'
+  commits:
+    description: "Commits on the PR"
+    value: '${{ steps.pr_details.outputs.commits }}'
 
 runs:
   using: 'composite'
@@ -39,6 +42,7 @@ runs:
           
           CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
           LABELS=$(echo "${PR_DETAILS}" | jq -r '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
+          COMMITS=${echo "${PR_DETAILS}" | jq -r '.commits[] | "* \(.oid[:7]) - \(.messageHeadline)"'}"
           
           NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
           NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
@@ -80,3 +84,9 @@ runs:
               echo "EOF"
             }  >> $GITHUB_OUTPUT
           fi
+
+          {
+            echo "commits<<EOF"
+            echo -e "${COMMITS}"
+            echo "EOF"
+          }  >> $GITHUB_OUTPUT

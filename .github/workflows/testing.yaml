@@ -365,9 +365,7 @@ jobs:
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
-                echo "$rtn_val"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
-                echo "${trivy_ignored["$tf_dir"]}"
                 trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' | sed 's/^  [0-9]+ .*//g' || true)"
               else
                 trivy_scan["$tf_dir"]="  Unable to check directory"
@@ -663,6 +661,14 @@ jobs:
               | Module | Previous version | New version |
               |--|--|--|
               ${{ steps.version_tags.outputs.out_string }}
+
+              <details>
+              <summary>
+              <h3>Commits</h3>
+              </summary>
+              ${{ steps.pr_details.outputs.commits }}
+              </details>
+                            
 
               <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
               <summary>
