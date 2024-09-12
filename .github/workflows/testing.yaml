@@ -872,7 +872,7 @@ jobs:
               echo $tag_major
 
               git add .
-              git commit -a -m "$message" -m "$description"
+              git commit -a -m "$message" -m "$description" || true
               git tag "$tag_patch" -m "$message" -m "$description"
               git tag -fa "$tag_major" -m "$message" -m "$description"
               git tag -fa "$tag_minor" -m "$message" -m "$description"
