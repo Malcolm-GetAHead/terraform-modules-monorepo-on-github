@@ -710,13 +710,13 @@ jobs:
 
             console.log(`newPage: ${newPage}`);
 
-            try {
+            # try {
                 mkdirSync('${{ github.workspace }}/wiki/generated')
-            } catch (err) {
-              console.log(`Dir error: ${JSON.stringify(err)}`);
-              if (err.code !== 'EEXIST') { error = JSON.stringify(err); }
-              return error;
-            }
+            # } catch (err) {
+            #   console.log(`Dir error: ${JSON.stringify(err)}`);
+            #   if (err.code !== 'EEXIST') { error = JSON.stringify(err); }
+            #   return error;
+            # }
             
             for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
 
