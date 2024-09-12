@@ -60,7 +60,7 @@ jobs:
           key: tfcache-${{ hashFiles('.github/dependencies/*') }}
 
       - name: Terraform Plugin Cache
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         uses: actions/cache@v4
         id: tf-cache
         with:
@@ -109,7 +109,7 @@ jobs:
               ${{ steps.pr_details.outputs.path_error }}
 
       - name: Terraform Format
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         id: tf_format
         run: |
           declare -a tf_fmt
@@ -142,7 +142,7 @@ jobs:
           echo "Output: ${output}"
 
       - name: Fail on invalid TF Format
-        if: env.is-merge-event == false && steps.tf_format.outputs.exit != 0
+        if: env.is-merge-event == 'false' && steps.tf_format.outputs.exit != 0
         uses: ./.github/actions/pr-comment
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -168,7 +168,7 @@ jobs:
               </details>
 
       - name: Terraform Init
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         id: tf_init
         run: |
             declare -a tf_init
@@ -207,7 +207,7 @@ jobs:
             echo "Output: ${output}"
 
       - name: Fail on invalid TF Init
-        if: env.is-merge-event == false && steps.tf_init.outputs.exit != 0
+        if: env.is-merge-event == 'false' && steps.tf_init.outputs.exit != 0
         uses: ./.github/actions/pr-comment
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -233,7 +233,7 @@ jobs:
               </details>
 
       - name: Terraform Validate
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         id: tf_validate
         run: |
             declare -a tf_val
@@ -273,7 +273,7 @@ jobs:
 
       - name: Fail on invalid TF Validate
         uses: ./.github/actions/pr-comment
-        if: env.is-merge-event == false && steps.tf_validate.outputs.exit != 0
+        if: env.is-merge-event == 'false' && steps.tf_validate.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -298,7 +298,7 @@ jobs:
               </details>
       
       - name: TF Lint
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         id: tf_lint
         run: |
             declare -a tf_lint
@@ -332,7 +332,7 @@ jobs:
 
       - name: Fail on invalid TFlint
         uses: ./.github/actions/pr-comment
-        if: env.is-merge-event == false && steps.tf_lint.outputs.exit != 0
+        if: env.is-merge-event == 'false' && steps.tf_lint.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -357,7 +357,7 @@ jobs:
               </details>
 
       - name: Trivy config scan
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         id: trivy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -411,7 +411,7 @@ jobs:
             echo "Output: ${output}"
 
       - name: Checkov scan
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         id: checkov
         run: |
             declare -A checkov_scan
@@ -462,7 +462,7 @@ jobs:
             echo -e "Output: ${output}"
 
       - name: Security scan outputs
-        if: env.is-merge-event == false && (steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0)
+        if: env.is-merge-event == 'false' && (steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0)
         uses: ./.github/actions/pr-comment
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -623,7 +623,7 @@ jobs:
           }  >> "$GITHUB_OUTPUT"
 
       - name: Build Summary Comment
-        if: env.is-merge-event == false
+        if: env.is-merge-event == 'false'
         uses: ./.github/actions/pr-comment
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
