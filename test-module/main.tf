@@ -10,7 +10,7 @@ provider "aws" {
 #trivy:ignore:AVD-AWS-0094
 #trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket" "test" {
-  #chec kov:skip=CKV2_AWS_6
+  #checkov:skip=CKV2_AWS_6
   #checkov:skip=CKV2_AWS_62
   #checkov:skip=CKV2_AWS_61
   #checkov:skip=CKV_AWS_144

@@ -14,10 +14,17 @@ on:
     types:
       - closed
 
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+  pull-requests: write
+
 env:
   TF_PLUGIN_CACHE_DIR: "${{ github.workspace }}/.terraform/cache"
   TFLINT_PLUGIN_DIR: "${{ github.workspace }}/.cache/tflint"
   TRIVY_CACHE_DIR: "${{ github.workspace }}/.cache/trivy"
+  TF_COMPLIANCE_DIR: "${{ github.workspace }}/dependencies/terraform-compliance"
   is-merge-event: >-
     ${{ github.event_name == 'pull_request_target'
      && github.event.action == 'closed'
@@ -403,8 +410,6 @@ jobs:
 
       - name: Checkov scan
         id: checkov
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
             declare -A checkov_scan
             declare -A checkov_ignored
@@ -483,6 +488,62 @@ jobs:
               ${{ steps.checkov.outputs.output }}
               </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
 
+      - name: AWS Login with Read-Only Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_TF_READONLY_ROLE }}
+
+      - name: Terraform-Compliance check
+        id: tf_compliance
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            declare -A compliance_scan
+            declare -A tfplan_output
+            rtn_chk=0
+            init_dir=$(pwd)
+
+            which terraform-compliance terraform
+            
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                cd "${init_dir}/${tf_dir}"
+                tfplan_output["$tf_dir"]="$(terraform plan -out tf.plan || true)"
+                compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan || true)"
+              else
+                compliance_scan["$tf_dir"]="  Unable to check directory"
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+            output=""
+            for key in "${!compliance_scan[@]}"; do
+              if [ "$(echo "${compliance_scan[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+                output+="<h3>Module: <u>$key</u></h3> \n${compliance_scan[$key]}\n\n"
+              fi
+            done
+            
+            plan_output=""
+            for key in "${!tfplan_output[@]}"; do
+              if [ "$(echo "${tfplan_output[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+                output+="<h3>Module: <u>$key</u></h3> \n${tfplan_output[$key]}\n\n"
+              fi
+            done
+
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo -e "$output"
+              echo "EOF"
+
+              echo "plan_output<<EOF"
+              echo -e "$plan_output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+
+            echo -e "Output: ${output}"
+            echo -e "Plan Output: ${plan_output}"
+
       - name: CICD Checks Complete PR comment
         uses: ./.github/actions/pr-comment
         with:
@@ -512,3 +573,21 @@ jobs:
               </summary>
               ${{ steps.checkov.outputs.ignored }}
               </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
+
+              <summary>
+              <h3> Terraform Plan </h3>
+              </summary>
+              <b>Plan is best effort!</b>
+              <pre>
+              ${{ steps.tf_compliance.outputs.plan_output }}
+              </pre>
+              </summary>
+
+              <summary>
+              <h3> Terraform Compliance Check </h3>
+              </summary>
+              <b>Compliance check is best effort!</b>
+              <pre>
+              ${{ steps.tf_compliance.outputs.output }}
+              </pre>
+              </summary>
