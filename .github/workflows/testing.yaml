@@ -619,7 +619,7 @@ jobs:
                 newVer: newVer.join('.')
               };
             }
-            return versions;
+            core.setOutput('versions', versions);
 
       - name: Extract changelog entry
         id: changelog
@@ -641,25 +641,30 @@ jobs:
               throw `'Changelog' section not found in PR body! Please add it back.`;
             if (changelogEntry.match(/^TODO:/m))
               throw `'Changelog' section needs proper text, instead of 'TODO'`;
-            return `* PR [#${ prInfo.number }](${ prInfo.html_url }) - ${ prInfo.title }
+            core.setOutput('changelog', `* PR [#${ prInfo.number }](${ prInfo.html_url }) - ${ prInfo.title }
             \`\`\`
             ${changelogEntry}
             \`\`\`
-            `
+            `);
 
       - name: Document example 'source' line
         id: source_example
         run: |
-          cat <<'EOF'
-          # Module Location
-          To use this module in your Terraform, use the below source value.
-          ```hcl
-          module "__MODULE_DIR__" {
-            source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
-            # also any inputs for the module (see below)
-          }
-          ```
-          EOF
+          {
+            echo "source<<EOF"
+            cat <<'EOF'
+            # Module Location
+            To use this module in your Terraform, use the below source value.
+            ```hcl
+            module "__MODULE_DIR__" {
+              source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
+              # also any inputs for the module (see below)
+            }
+            ```
+            EOF
+            echo "EOF"
+          }  >> "$GITHUB_OUTPUT"
+
 
       - name: Test
         run: |
