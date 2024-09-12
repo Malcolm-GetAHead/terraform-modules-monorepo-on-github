@@ -837,6 +837,8 @@ jobs:
               version=$(jq -r '."'"$tf_dir"'".newVer' <<< "$version_json")
               version_prev=$(jq -r '."'"$tf_dir"'".prevVer' <<< "$version_json")
 
+              echo "'$version_prev'"
+
               IFS='.' read -r -a version_parts <<< "$version"
 
               tmp_branch="tmp_${tf_dir}_v${version}"
@@ -844,6 +846,8 @@ jobs:
               tag_patch="${tf_dir}/v${version}"
               tag_major="${tf_dir}/v${version_parts[0]}"
               tag_minor="${tf_dir}/v${version_parts[0]}.${version_parts[1]}"
+
+              echo "'$tag_prev'"
 
               tmp_dir=$(mktemp -d)
               mv "${tf_dir}"/* "${tmp_dir}"
