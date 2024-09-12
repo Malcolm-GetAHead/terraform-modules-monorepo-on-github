@@ -676,6 +676,7 @@ jobs:
         # if: env.is-merge-event == 'true'
         with:
           script: |
+            console.log("started");
             const { owner, repo } = context.repo;
             const { readdir, readFile, writeFile, mkdirSync } = require('fs').promises;
             const utf8 = { encoding: 'utf-8' };
@@ -684,6 +685,9 @@ jobs:
 
             const versions = JSON.parse(JSON.stringify(`${{ steps.version_tags.outputs.versions }}`));
             const tf_docs = JSON.parse(JSON.stringify(`${{ steps.tf_docs.outputs.docs_json }}`));
+
+            console.log(`versions: ${JSON.parse(versions)}`);
+            console.log(`tf_docs: ${JSON.parse(tf_docs)}`);
             
             const newPage = `
             Replace with an introduction about the module!
@@ -704,14 +708,19 @@ jobs:
             __WARNING: Sections below this comment will be replaced and/or added to automatically.__
             `;
 
+            console.log(`newPage: ${newPage}`);
+
             try {
                 mkdirSync('${{ github.workspace }}/wiki/generated')
             } catch (err) {
+              console.log(`Dir error: ${JSON.stringify(err)}`);
               if (err.code !== 'EEXIST') { error = JSON.stringify(err); }
               return error;
             }
             
             for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
+
+              console.log(`Processing dir: ${folder}`);
 
               const newVersion = versions[folder].newVer;
 
