@@ -683,8 +683,8 @@ jobs:
             const msgParts = [];
             let error = "";
 
-            const versions = JSON.parse(let output = (function() {/*${{ steps.version_tags.outputs.versions }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1];
-            const tf_docs = JSON.parse(let output = (function() {/*${{ steps.tf_docs.outputs.docs_json }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1];
+            const versions = JSON.parse((function() {/*${{ steps.version_tags.outputs.versions }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
+            const tf_docs = JSON.parse((function() {/*${{ steps.tf_docs.outputs.docs_json }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
 
             console.log(`versions: ${JSON.stringify(versions)}`);
             console.log(`tf_docs: ${JSON.stringify(tf_docs)}`);
