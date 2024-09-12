@@ -822,7 +822,7 @@ jobs:
           
           IFS='.' read -r -a version_parts <<< "$version"
 
-          run_ref="$(git branch --show-current)"
+          run_ref="${{ github.sha }}"
           echo "runref: ${run_ref}"
 
           cd "${{ github.workspace }}"
