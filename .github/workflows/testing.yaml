@@ -719,7 +719,7 @@ jobs:
             done | jq -s 'add')
 
             {
-              echo "json<<EOF"
+              echo "docs_json<<EOF"
               echo -e "$json"
               echo "EOF"
             }  >> "$GITHUB_OUTPUT"
@@ -746,7 +746,7 @@ jobs:
             let error = "";
 
             const versions = JSON.parse(`${{ steps.version_tags.outputs.versions }}`);
-            const tf_docs = JSON.parse(`${{ steps.tf_docs.ouputs.td_docs }}`);
+            const tf_docs = JSON.parse(`${{ steps.tf_docs.outputs.docs_json }}`);
             
             const newPage = `
             Replace with an introduction about the module!
