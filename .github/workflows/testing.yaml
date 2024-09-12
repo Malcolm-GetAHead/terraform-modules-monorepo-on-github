@@ -805,20 +805,23 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          message=<<EOF
+          message=$(cat <<'EOF'
           ${{ github.event.pull_request.title }}
           EOF
-          message="$(echo $message | tr -d '\n')"
-          description=<<EOF
+          )
+          description=$(cat <<'EOF'
           ${{ steps.changelog.outputs.changelog }}
           EOF
+          )
 
-          version_json=<<EOF
+
+          version_json=$(cat <<'EOF'
           ${{ steps.version_tags.outputs.versions }}
           EOF
+          )
 
-          echo "${message}"
-          echo "${description}"
+          echo "message: ${message}"
+          echo "description: ${description}"
 
           version=$(jq -r '."test".newVer' <<< "$version_json")
           version_prev=$(jq -r '."test".prevVer' <<< "$version_json")
