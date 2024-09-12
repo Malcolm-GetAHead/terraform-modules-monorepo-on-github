@@ -510,7 +510,7 @@ jobs:
               if [ -d "${init_dir}/${tf_dir}" ]; then
                 cd "${init_dir}/${tf_dir}"
                 tfplan_output["$tf_dir"]="$(terraform plan -no-color -out tf.plan 2>&1 || true)"
-                compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' || true)"
+                compliance_scan["$tf_dir"]="$(terraform-compliance --no-ansi -f "$TF_COMPLIANCE_DIR" -p tf.plan 2>&1  || true)"
               else
                 compliance_scan["$tf_dir"]="  Unable to check directory"
               fi
@@ -519,14 +519,14 @@ jobs:
             output=""
             for key in "${!compliance_scan[@]}"; do
               if [ "$(echo "${compliance_scan[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                output+="<h3>Module: <u>$key</u></h3> \n${compliance_scan[$key]}\n\n"
+                output+="========\nModule: <u>$key</u>\n======== \n${compliance_scan[$key]}\n\n"
               fi
             done
             
             plan_output=""
             for key in "${!tfplan_output[@]}"; do
               if [ "$(echo "${tfplan_output[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                plan_output+="<h3>Module: <u>$key</u></h3> \n${tfplan_output[$key]}\n\n"
+                plan_output+="========\nModule: <u>$key</u>\n========\n${tfplan_output[$key]}\n\n"
               fi
             done
 
@@ -595,7 +595,7 @@ jobs:
               ```
               ${{ steps.tf_compliance.outputs.output }}
               ```
-              
+
               
               </summary>
 
