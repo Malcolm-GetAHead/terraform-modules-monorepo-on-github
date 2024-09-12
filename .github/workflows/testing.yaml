@@ -850,9 +850,9 @@ jobs:
 
               git checkout -b "${tmp_branch}"
 
-              find . -maxdepth 1 ! -name '.git'
+              find . -maxdepth 1 ! -name '.git' -exec rm -rf {} \;
 
-              mv "${tmp_dir}/*" .
+              mv "${tmp_dir}"/* .
               rm -rf "${tmp_dir}"
 
               git add .
