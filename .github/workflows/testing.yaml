@@ -822,7 +822,8 @@ jobs:
           
           IFS='.' read -r -a version_parts <<< "$version"
 
-          run_ref="${{ github.ref }}"
+          run_ref="$(git symbolic-ref --short HEAD)"
+          echo "runref: ${run_ref}"
 
           cd "${{ github.workspace }}"
 
