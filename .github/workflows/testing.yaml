@@ -580,7 +580,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: "${{ steps.pr_details.outputs.changed_dirs }}".split(/\r?\n/)
+              labels: `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)
             })
 
       - name: Get version tags
@@ -596,7 +596,7 @@ jobs:
                 }
               }
             }`;
-            const tf_modules = "${{ steps.pr_details.outputs.changed_dirs }}".split(/\r?\n/);
+            const tf_modules = `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/);
             let versions = {};
             for(var i = 0; i < tf_modules.length; i++) {
               const result = await github.graphql(query, { owner, repo,
