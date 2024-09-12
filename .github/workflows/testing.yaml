@@ -24,7 +24,7 @@ env:
   TF_PLUGIN_CACHE_DIR: "${{ github.workspace }}/.terraform/cache"
   TFLINT_PLUGIN_DIR: "${{ github.workspace }}/.cache/tflint"
   TRIVY_CACHE_DIR: "${{ github.workspace }}/.cache/trivy"
-  TF_COMPLIANCE_DIR: "${{ github.workspace }}/dependencies/terraform-compliance"
+  TF_COMPLIANCE_DIR: "${{ github.workspace }}/.github/dependencies/terraform-compliance"
   is-merge-event: >-
     ${{ github.event_name == 'pull_request_target'
      && github.event.action == 'closed'
@@ -74,21 +74,21 @@ jobs:
           WS_DIR: ${{ github.workspace }}
           TFLINT_PLUGIN_DIR: ${{ env.TFLINT_PLUGIN_DIR }}
 
-      # - name: CICD Start PR comment
-      #   uses: ./.github/actions/pr-comment
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: CICD Start PR comment
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         :rocket: CICD Run Initilized!
+              :rocket: CICD Run Initilized!
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |||||||
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |||||||
 
       - name: Get PR Labels and changed dirs
         id: pr_details
@@ -169,43 +169,43 @@ jobs:
       #         ```
       #         </details>
 
-      # - name: Terraform Init
-      #   id: tf_init
-      #   run: |
-      #       declare -a tf_init
-      #       rtn_chk=0
-      #       init_dir=$(pwd)
+      - name: Terraform Init
+        id: tf_init
+        run: |
+            declare -a tf_init
+            rtn_chk=0
+            init_dir=$(pwd)
 
-      #       which terraform
+            which terraform
 
-      #       while read -r tf_dir; do
-      #         if [ -d "$init_dir/$tf_dir" ]; then
-      #           cd "$init_dir/$tf_dir" || exit 1
+            while read -r tf_dir; do
+              if [ -d "$init_dir/$tf_dir" ]; then
+                cd "$init_dir/$tf_dir" || exit 1
               
-      #           rtn_val="$(terraform init -backend=false -no-color 2>&1 || true)"
-      #           if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
-      #             tf_init+=("$rtn_val")
-      #           fi
-      #         else
-      #           tf_init+=("Unable to check directory: '${tf_dir}'")
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+                rtn_val="$(terraform init -backend=false -no-color 2>&1 || true)"
+                if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
+                  tf_init+=("$rtn_val")
+                fi
+              else
+                tf_init+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       output=$(printf "%s\n" "${tf_init[@]}")
+            output=$(printf "%s\n" "${tf_init[@]}")
 
-      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo "$output"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
 
       # - name: Fail on invalid TF Init
       #   uses: ./.github/actions/pr-comment
@@ -355,138 +355,138 @@ jobs:
       #         ```
       #         </details>
 
-      - name: Trivy config scan
-        id: trivy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-            declare -A trivy_scan
-            declare -A trivy_ignored
-            rtn_chk=0
+      # - name: Trivy config scan
+      #   id: trivy
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #       declare -A trivy_scan
+      #       declare -A trivy_ignored
+      #       rtn_chk=0
             
-            which checkov
+      #       which checkov
             
-            while read -r tf_dir; do
-              if [ -d "$tf_dir" ]; then
-                rtn_val="$(trivy config --quiet --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
-                trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
-                trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' | sed 's/^  [0-9]+ .*//g' || true)"
-              else
-                trivy_scan["$tf_dir"]="  Unable to check directory"
-              fi
-            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+      #       while read -r tf_dir; do
+      #         if [ -d "$tf_dir" ]; then
+      #           rtn_val="$(trivy config --quiet --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
+      #           trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
+      #           trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' | sed 's/^  [0-9]+ .*//g' || true)"
+      #         else
+      #           trivy_scan["$tf_dir"]="  Unable to check directory"
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            output=""
-            for key in "${!trivy_scan[@]}"; do
-              if [ "$(echo "${trivy_scan[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                output+="<h3>Module: $key</h3> \n${trivy_scan[$key]}\n\n"
-              fi
-            done
-            ignored=""
-            for key in "${!trivy_ignored[@]}"; do
-              if [ "$(echo "${trivy_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                ignored+="<h3>Module: <u>$key</u></h3> \n<pre>${trivy_ignored[$key]}</pre>\n\n"
-              fi
-            done
+      #       output=""
+      #       for key in "${!trivy_scan[@]}"; do
+      #         if [ "$(echo "${trivy_scan[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+      #           output+="<h3>Module: $key</h3> \n${trivy_scan[$key]}\n\n"
+      #         fi
+      #       done
+      #       ignored=""
+      #       for key in "${!trivy_ignored[@]}"; do
+      #         if [ "$(echo "${trivy_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+      #           ignored+="<h3>Module: <u>$key</u></h3> \n<pre>${trivy_ignored[$key]}</pre>\n\n"
+      #         fi
+      #       done
 
-            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-              rtn_chk=1
-            fi
+      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+      #         rtn_chk=1
+      #       fi
 
-            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            {
-              echo "output<<EOF"
-              echo -e "$output"
-              echo "EOF"
+      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "output<<EOF"
+      #         echo -e "$output"
+      #         echo "EOF"
 
-              echo "ignored<<EOF"
-              echo -e "$ignored"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
+      #         echo "ignored<<EOF"
+      #         echo -e "$ignored"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
 
-            echo "Exit: ${rtn_chk}"
-            echo -e "Ignored: ${ignored}"
-            echo "Output: ${output}"
+      #       echo "Exit: ${rtn_chk}"
+      #       echo -e "Ignored: ${ignored}"
+      #       echo "Output: ${output}"
 
-      - name: Checkov scan
-        id: checkov
-        run: |
-            declare -A checkov_scan
-            declare -A checkov_ignored
-            rtn_chk=0
+      # - name: Checkov scan
+      #   id: checkov
+      #   run: |
+      #       declare -A checkov_scan
+      #       declare -A checkov_ignored
+      #       rtn_chk=0
             
-            which checkov
+      #       which checkov
             
-            while read -r tf_dir; do
-              if [ -d "$tf_dir" ]; then
-                checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
-                checkov_scan["$tf_dir"]="$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results' || true)"
-              else
-                checkov_scan["$tf_dir"]="  Unable to check directory"
-              fi
-            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+      #       while read -r tf_dir; do
+      #         if [ -d "$tf_dir" ]; then
+      #           checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
+      #           checkov_scan["$tf_dir"]="$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results' || true)"
+      #         else
+      #           checkov_scan["$tf_dir"]="  Unable to check directory"
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            output=""
-            for key in "${!checkov_scan[@]}"; do
-              if [ "$(echo "${checkov_scan[$key]}" | grep -v -- '---' | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                output+="<h3>Module: <u>$key</u></h3> \n${checkov_scan[$key]}\n\n"
-              fi
-            done
-            ignored=""
-            for key in "${!checkov_ignored[@]}"; do
-              if [ "$(echo "${checkov_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-                ignored+="<h3>Module: $key</h3> \n<pre>${checkov_ignored[$key]}</pre>\n\n"
-              fi
-            done
+      #       output=""
+      #       for key in "${!checkov_scan[@]}"; do
+      #         if [ "$(echo "${checkov_scan[$key]}" | grep -v -- '---' | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+      #           output+="<h3>Module: <u>$key</u></h3> \n${checkov_scan[$key]}\n\n"
+      #         fi
+      #       done
+      #       ignored=""
+      #       for key in "${!checkov_ignored[@]}"; do
+      #         if [ "$(echo "${checkov_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+      #           ignored+="<h3>Module: $key</h3> \n<pre>${checkov_ignored[$key]}</pre>\n\n"
+      #         fi
+      #       done
 
-            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-              rtn_chk=1
-            fi
+      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+      #         rtn_chk=1
+      #       fi
 
-            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-            {
-              echo "output<<EOF"
-              echo -e "$output"
-              echo "EOF"
+      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "output<<EOF"
+      #         echo -e "$output"
+      #         echo "EOF"
 
-              echo "ignored<<EOF"
-              echo -e "$ignored"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
+      #         echo "ignored<<EOF"
+      #         echo -e "$ignored"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
 
-            echo "Exit: ${rtn_chk}"
-            echo -e "Ignored: ${ignored}"
-            echo -e "Output: ${output}"
+      #       echo "Exit: ${rtn_chk}"
+      #       echo -e "Ignored: ${ignored}"
+      #       echo -e "Output: ${output}"
 
-      - name: Security scan outputs
-        uses: ./.github/actions/pr-comment
-        if: steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
+      # - name: Security scan outputs
+      #   uses: ./.github/actions/pr-comment
+      #   if: steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     commit_sha: ${{ github.event.after }}
+      #     fail_run: true
+      #     update_existing: true
+      #     comment_capture: '## Terraform Module Release'
+      #     comment: |
+      #         ## Terraform Module Release
 
-              |Format|Init|Validate|Lint|Trivy|Checkov|
-              |-|-|-|-|-|-|
-              |✅|✅|✅|✅|${{ steps.trivy.outputs.exit == 0 && '✅' || '❌' }}|${{ steps.checkov.outputs.exit == 0 && '✅' || '❌' }}|
+      #         |Format|Init|Validate|Lint|Trivy|Checkov|
+      #         |-|-|-|-|-|-|
+      #         |✅|✅|✅|✅|${{ steps.trivy.outputs.exit == 0 && '✅' || '❌' }}|${{ steps.checkov.outputs.exit == 0 && '✅' || '❌' }}|
 
-              <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
-              <summary>
-              <h3>Trivy scan results</h3>
-              </summary>
-              ${{ steps.trivy.outputs.output }}
-              </details${{ steps.trivy.outputs.exit == 0 && '--' || '' }}>
+      #         <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
+      #         <summary>
+      #         <h3>Trivy scan results</h3>
+      #         </summary>
+      #         ${{ steps.trivy.outputs.output }}
+      #         </details${{ steps.trivy.outputs.exit == 0 && '--' || '' }}>
 
-              <${{ steps.checkov.outputs.exit == 0 && '!--' || '' }}details>
-              <summary>
-              <h3>Checkov scan results</h3>
-              </summary>
-              ${{ steps.checkov.outputs.output }}
-              </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
+      #         <${{ steps.checkov.outputs.exit == 0 && '!--' || '' }}details>
+      #         <summary>
+      #         <h3>Checkov scan results</h3>
+      #         </summary>
+      #         ${{ steps.checkov.outputs.output }}
+      #         </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
 
       - name: AWS Login with Read-Only Role
         uses: aws-actions/configure-aws-credentials@v4
@@ -507,7 +507,7 @@ jobs:
             which terraform-compliance terraform
             
             while read -r tf_dir; do
-              if [ -d "$tf_dir" ]; then
+              if [ -d "${init_dir}/${tf_dir}" ]; then
                 cd "${init_dir}/${tf_dir}"
                 tfplan_output["$tf_dir"]="$(terraform plan -out tf.plan || true)"
                 compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan || true)"
@@ -560,19 +560,7 @@ jobs:
               |-|-|-|-|-|-|
               |✅|✅|✅|✅|✅|✅|
 
-              <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
-              <summary>
-              <h3>Trivy Skipped Checks</h3>
-              </summary>
-              ${{ steps.trivy.outputs.ignored }}
-              </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
 
-              <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
-              <summary>
-              <h3>Checkov Skipped Checks</h3>
-              </summary>
-              ${{ steps.checkov.outputs.ignored }}
-              </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
 
               <summary>
               <h3> Terraform Plan </h3>
@@ -591,3 +579,18 @@ jobs:
               ${{ steps.tf_compliance.outputs.output }}
               </pre>
               </summary>
+
+
+# <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
+# <summary>
+# <h3>Trivy Skipped Checks</h3>
+# </summary>
+# ${{ steps.trivy.outputs.ignored }}
+# </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
+
+# <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
+# <summary>
+# <h3>Checkov Skipped Checks</h3>
+# </summary>
+# ${{ steps.checkov.outputs.ignored }}
+# </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
