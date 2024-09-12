@@ -50,6 +50,54 @@ jobs:
 
               :rocket: CICD Run Initilized!
 
+      - name: Extract changelog entry
+        # if: env.is-merge-event == 'true'
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: prInfo } = await github.rest.pulls.get({
+              owner, repo,
+              pull_number: context.issue.number,
+            });
+
+            console.log(`Found PR body:|\n${prInfo.body}`);
+
+            const changelogEntry = ((prInfo.body
+              .split(/^#+ ?/m)
+              .find(x => x.startsWith('Changelog'))
+              || '').split(/^```/m)[1] || '').trim();
+
+            let changelog_error = "";
+
+            if (!changelogEntry || changelogEntry === '') {
+              changelog_error = `'Changelog' section not found in PR body! Please add it back.`;
+            }
+
+            if (changelogEntry.match(/^TODO:/m)) {
+              changelog_error = `'Changelog' section needs proper text, instead of 'TODO'`;
+            }
+
+            console.log(`Changelog comment:|\n${changelogEntry}`);
+
+            core.setOutput('changelog', changelogEntry);
+            core.setOutput('changelog_error', changelog_error);
+
+      - name: Invalid PR description
+        if: steps.changelog.outputs.changelog_error != ''
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              ${{ steps.changelog.outputs.changelog_error }}
+
       - name: Terraform Tools Cache
         uses: actions/cache@v4
         id: tf-tools-cache
@@ -491,17 +539,17 @@ jobs:
       #         ${{ steps.checkov.outputs.output }}
       #         </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
 
-      - name: Label PR with module name
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)
-            })
+      # - name: Label PR with module name
+      #   if: github.event_name == 'pull_request'
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       github.rest.issues.addLabels({
+      #         issue_number: context.issue.number,
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         labels: `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)
+      #       })
 
       - name: Get version tags
         id: version_tags
@@ -599,183 +647,216 @@ jobs:
               
       #         </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
 
-      - name: Extract changelog entry
-        # if: env.is-merge-event == 'true'
-        id: changelog
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const { data: prInfo } = await github.rest.pulls.get({
-              owner, repo,
-              pull_number: context.issue.number,
-            });
+      # - name: Generate TF Docs
+      #   id: tf_docs
+      #   run: |
+      #       declare -A tfdoc_output
+      #       rtn_chk=0
+      #       init_dir="${{ github.workspace }}"
 
-            console.log(`Found PR body:|\n${prInfo.body}`);
-
-            const changelogEntry = ((prInfo.body
-              .split(/^#+ ?/m)
-              .find(x => x.startsWith('Changelog'))
-              || '').split(/^```/m)[1] || '').trim();
-
-            let changelog_error = "";
-
-            if (!changelogEntry || changelogEntry === '') {
-              changelog_error = `'Changelog' section not found in PR body! Please add it back.`;
-            }
-
-            if (changelogEntry.match(/^TODO:/m)) {
-              changelog_error = `'Changelog' section needs proper text, instead of 'TODO'`;
-            }
-
-            console.log(`Changelog comment:|\n${changelogEntry}`);
-
-            core.setOutput('changelog', changelogEntry);
-            core.setOutput('changelog_error', changelog_error);
-
-      - name: Generate TF Docs
-        id: tf_docs
-        run: |
-            declare -A tfdoc_output
-            rtn_chk=0
-            init_dir="${{ github.workspace }}"
-
-            which terraform-docs
+      #       which terraform-docs
             
-            while read -r tf_dir; do
-              if [ -d "${init_dir}/${tf_dir}" ]; then
-                tfdoc_output["$tf_dir"]="$(terraform-docs markdown table --sort-by required --sort-by name "${init_dir}/${tf_dir}" 2>&1 || true)"
-              else
-                compliance_scan["$tf_dir"]="  Unable to check directory"
-              fi
-            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+      #       while read -r tf_dir; do
+      #         if [ -d "${init_dir}/${tf_dir}" ]; then
+      #           tfdoc_output["$tf_dir"]="$(terraform-docs markdown table --sort-by required --sort-by name "${init_dir}/${tf_dir}" 2>&1 || true)"
+      #         else
+      #           compliance_scan["$tf_dir"]="  Unable to check directory"
+      #         fi
+      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-            json=$(for key in "${!tfdoc_output[@]}"; do
-              jq -n --arg key "$key" --arg value "${tfdoc_output[$key]}" \
-                '{($key): $value}'
-            done | jq -rs 'add')
+      #       json=$(for key in "${!tfdoc_output[@]}"; do
+      #         jq -n --arg key "$key" --arg value "${tfdoc_output[$key]}" \
+      #           '{($key): $value}'
+      #       done | jq -rs 'add')
 
-            {
-              echo "docs_json<<EOF"
-              echo "$json"
-              echo "EOF"
-            }  >> "$GITHUB_OUTPUT"
+      #       {
+      #         echo "docs_json<<EOF"
+      #         echo "$json"
+      #         echo "EOF"
+      #       }  >> "$GITHUB_OUTPUT"
 
-            echo -e "JSON: ${json}"
+      #       echo -e "JSON: ${json}"
 
-      - name: Checkout wiki
-        # if: env.is-merge-event == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}.wiki
-          path: "${{ github.workspace }}/wiki"
-          fetch-depth: 0
+      # - name: Checkout wiki
+      #   # if: env.is-merge-event == 'true'
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: ${{ github.repository }}.wiki
+      #     path: "${{ github.workspace }}/wiki"
+      #     fetch-depth: 0
           
-      - name: Generate wiki page
-        uses: actions/github-script@v7
-        id: generate_wiki
+      # - name: Generate wiki page
+      #   uses: actions/github-script@v7
+      #   id: generate_wiki
+      #   if: env.is-merge-event == 'true'
+      #   with:
+      #     script: |
+      #       console.log("started");
+      #       const { owner, repo } = context.repo;
+      #       const { readdir, readFile, writeFile, mkdir } = require('fs').promises;
+      #       const utf8 = { encoding: 'utf-8' };
+      #       const msgParts = [];
+      #       let error = "";
+
+      #       const versions = JSON.parse((function() {/*${{ steps.version_tags.outputs.versions }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
+      #       const tf_docs = JSON.parse((function() {/*${{ steps.tf_docs.outputs.docs_json }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
+
+      #       console.log(`versions: ${JSON.stringify(versions)}`);
+      #       console.log(`tf_docs: ${JSON.stringify(tf_docs)}`);
+            
+      #       const newPage = `
+      #       Replace with an introduction about the module!
+      #       Text and markdown up here will be preserved over time,
+      #       while the rest of the wiki page is generated from the release process.
+
+      #       # Module Location
+            
+      #       To use this module in your Terraform, use the below source value.
+            
+      #       \`\`\`hcl
+      #       module "__MODULE_DIR__" {
+      #         source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
+      #         # also any inputs for the module (see below)
+      #       }
+      #       \`\`\`
+            
+      #       __WARNING: Sections below this comment will be replaced and/or added to automatically.__
+      #       `;
+
+      #       console.log(`newPage: ${newPage}`);
+
+      #       try {
+      #           await mkdir('${{ github.workspace }}/wiki/generated')
+      #       } catch (err) {
+      #         if (err.code !== 'EEXIST') { 
+      #           console.log(`Dir error: ${JSON.stringify(err)}`);
+      #           error = JSON.stringify(err);
+      #           return error;
+      #         }
+      #       }
+            
+      #       for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
+
+      #         console.log(`Processing dir: ${folder}`);
+
+      #         const newVersion = versions[folder].newVer;
+
+      #         const readText = (name) => readFile(name, utf8).then(x => x.trim());
+      #         const wikiPath = `wiki/generated/${folder}.md`;
+      #         const prevWiki = await readText(wikiPath)
+      #           .catch(err => err.code === 'ENOENT' ? newPage.replaceAll('__MODULE_DIR__', folder).replaceAll('__MODULE_VERSION__', newVersion) : Promise.reject(err));
+              
+      #         if (!prevWiki) { console.warn('Starting new wiki page for', folder); }
+              
+      #         const docs = tf_docs[folder];
+      #         const changelog = `
+              
+      #         * PR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }}
+              
+      #         \`\`\`
+      #         ${{ steps.changelog.outputs.changelog }}
+      #         \`\`\`
+      #         `;
+              
+      #         let newWiki = prevWiki;
+      #         if (!newWiki.match(/^<!-- BEGIN DOCS -->$/m)) {
+      #           newWiki += `\n<!-- BEGIN DOCS -->\n<!-- END DOCS -->\n`;
+      #         }
+              
+      #         newWiki = newWiki.replace(/^<!-- BEGIN DOCS -->$[^]+^<!-- END DOCS -->$/m,
+      #           `<!-- BEGIN DOCS -->\n${docs}\n<!-- END DOCS -->`);
+              
+      #         if (!newWiki.match(/^<!-- CHANGELOG MARKER -->$/m)) {
+      #           newWiki += `\n\n# Changelog\n<!-- CHANGELOG MARKER -->\n`;
+      #         }
+              
+      #         const changelogHeader = `## ${newVersion} (${new Date().toISOString().split('T')[0]})`
+              
+      #         newWiki = newWiki.replace(/^<!-- CHANGELOG MARKER -->$/m,
+      #           `<!-- CHANGELOG MARKER -->\n${changelogHeader}\n${changelog}\n`);
+              
+      #         await writeFile(wikiPath, newWiki, utf8);
+              
+      #         msgParts.push(`${folder} @ ${newVersion}`);
+              
+      #         console.log(`Updated ${folder} @ ${newVersion}`);
+      #       }
+      #       return msgParts.join(', ');
+      #     result-encoding: string
+
+      # - name: Push changes to wiki
+      #   if: env.is-merge-event == 'true'
+      #   working-directory: "${{ github.workspace }}/wiki"
+      #   run: |
+      #     git config --local user.email "github-actions[bot]@users.noreply.github.com"
+      #     git config --local user.name "github-actions[bot]"
+      #     git add -A
+      #     git commit -m "${{ steps.generate_wiki.outputs.result }}"
+      #     git push
+
+      - name: Create release branches
         # if: env.is-merge-event == 'true'
-        with:
-          script: |
-            console.log("started");
-            const { owner, repo } = context.repo;
-            const { readdir, readFile, writeFile, mkdir } = require('fs').promises;
-            const utf8 = { encoding: 'utf-8' };
-            const msgParts = [];
-            let error = "";
-
-            const versions = JSON.parse((function() {/*${{ steps.version_tags.outputs.versions }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
-            const tf_docs = JSON.parse((function() {/*${{ steps.tf_docs.outputs.docs_json }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
-
-            console.log(`versions: ${JSON.stringify(versions)}`);
-            console.log(`tf_docs: ${JSON.stringify(tf_docs)}`);
-            
-            const newPage = `
-            Replace with an introduction about the module!
-            Text and markdown up here will be preserved over time,
-            while the rest of the wiki page is generated from the release process.
-
-            # Module Location
-            
-            To use this module in your Terraform, use the below source value.
-            
-            \`\`\`hcl
-            module "__MODULE_DIR__" {
-              source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
-              # also any inputs for the module (see below)
-            }
-            \`\`\`
-            
-            __WARNING: Sections below this comment will be replaced and/or added to automatically.__
-            `;
-
-            console.log(`newPage: ${newPage}`);
-
-            try {
-                await mkdir('${{ github.workspace }}/wiki/generated')
-            } catch (err) {
-              if (err.code !== 'EEXIST') { 
-                console.log(`Dir error: ${JSON.stringify(err)}`);
-                error = JSON.stringify(err);
-                return error;
-              }
-            }
-            
-            for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
-
-              console.log(`Processing dir: ${folder}`);
-
-              const newVersion = versions[folder].newVer;
-
-              const readText = (name) => readFile(name, utf8).then(x => x.trim());
-              const wikiPath = `wiki/generated/${folder}.md`;
-              const prevWiki = await readText(wikiPath)
-                .catch(err => err.code === 'ENOENT' ? newPage.replaceAll('__MODULE_DIR__', folder).replaceAll('__MODULE_VERSION__', newVersion) : Promise.reject(err));
-              
-              if (!prevWiki) { console.warn('Starting new wiki page for', folder); }
-              
-              const docs = tf_docs[folder];
-              const changelog = `
-              
-              * PR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }}
-              
-              \`\`\`
-              ${{ steps.changelog.outputs.changelog }}
-              \`\`\`
-              `;
-              
-              let newWiki = prevWiki;
-              if (!newWiki.match(/^<!-- BEGIN DOCS -->$/m)) {
-                newWiki += `\n<!-- BEGIN DOCS -->\n<!-- END DOCS -->\n`;
-              }
-              
-              newWiki = newWiki.replace(/^<!-- BEGIN DOCS -->$[^]+^<!-- END DOCS -->$/m,
-                `<!-- BEGIN DOCS -->\n${docs}\n<!-- END DOCS -->`);
-              
-              if (!newWiki.match(/^<!-- CHANGELOG MARKER -->$/m)) {
-                newWiki += `\n\n# Changelog\n<!-- CHANGELOG MARKER -->\n`;
-              }
-              
-              const changelogHeader = `## ${newVersion} (${new Date().toISOString().split('T')[0]})`
-              
-              newWiki = newWiki.replace(/^<!-- CHANGELOG MARKER -->$/m,
-                `<!-- CHANGELOG MARKER -->\n${changelogHeader}\n${changelog}\n`);
-              
-              await writeFile(wikiPath, newWiki, utf8);
-              
-              msgParts.push(`${folder} @ ${newVersion}`);
-              
-              console.log(`Updated ${folder} @ ${newVersion}`);
-            }
-            return msgParts.join(', ');
-          result-encoding: string
-
-      - name: Push changes to wiki
-        # if: env.is-merge-event == 'true'
-        working-directory: "${{ github.workspace }}/wiki"
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add -A
-          git commit -m "${{ steps.generate_wiki.outputs.result }}"
-          git push
+
+          message=<<EOF
+          ${{ github.event.pull_request.title }}
+          EOF
+          message="$(echo $message | tr -d '\n')"
+          description= <<EOF
+          ${{ steps.changelog.outputs.changelog }}
+          EOF
+
+          version_json=<<EOF
+          ${{ steps.version_tags.outputs.versions }}
+          EOF
+
+          version=$(jq -r '."test".newVer' <<< "$version_json")
+          version_prev=$(jq -r '."test".prevVer' <<< "$version_json")
+          
+          IFS='.' read -r -a version_parts <<< "$version"
+
+          latest_sha="${{ github.event.after }}"
+
+          cd "${{ github.workspace }}"
+
+          while read -r tf_dir; do
+
+            git checkout -f "$latest_sha"
+
+            if [ -d "$tf_dir" ]; then
+
+              tmp_branch="tmp_${tf_dir}_v${version}"
+              tag_prev="${tf_dir}/v${version_prev}"
+              tag_patch="${tf_dir}/v${version}"
+              tag_major="${tf_dir}/v${version_parts[0]}"
+              tag_minor="${tf_dir}/v${version_parts[0]}.${version_parts[1]}"
+
+              tmp_dir=$(mktemp -d)
+              mv "${tf_dir}/*" "${tmp_dir}"
+
+              if [ get tag -l "${tag_prev}" 2>&1 > /dev/null ]; then
+                git checkout -f "{tag_prev}"
+              else
+                git checkout -f "$latest_sha"
+              fi
+
+              git checkout -b "${tmp_branch}"
+
+              find . -maxdepth 1 ! -name '.git'
+
+              mv "${tmp_dir}/*" .
+              rm -rf "${tmp_dir}"
+
+              git add .
+              git commit -a -m "$message" -m "$description"
+              git tag "$tag" -m "$message" -m "$description"
+              git tag -fa "$majorTag" -m "$message" -m "$description"
+              git tag -fa "$minorTag" -m "$message" -m "$description"
+              git push origin "$tag"
+              git push origin "$minorTag" -f
+              git push origin "$majorTag" -f
+            fi
+          done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
