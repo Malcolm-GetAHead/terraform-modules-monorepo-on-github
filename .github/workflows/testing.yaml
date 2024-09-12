@@ -720,7 +720,7 @@ jobs:
 
             {
               echo "docs_json<<EOF"
-              echo -e "$json"
+              echo "$json"
               echo "EOF"
             }  >> "$GITHUB_OUTPUT"
 
