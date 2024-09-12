@@ -827,11 +827,15 @@ jobs:
 
           cd "${{ github.workspace }}"
 
+          ls -l
+
           while read -r tf_dir; do
 
             if [ -d "$tf_dir" ]; then
 
               git checkout -f "${run_ref}"
+
+              ls -l
 
               tmp_branch="tmp_${tf_dir}_v${version}"
               tag_prev="${tf_dir}/v${version_prev}"
