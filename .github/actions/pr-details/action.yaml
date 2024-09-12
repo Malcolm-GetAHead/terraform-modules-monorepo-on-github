@@ -33,7 +33,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
       shell: bash
       run: |
-          PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files)
+          PR_DETAILS=$(gh pr view $PR_URL --json labels,changedFiles,files,commits)
 
           echo "${PR_DETAILS}"
           
