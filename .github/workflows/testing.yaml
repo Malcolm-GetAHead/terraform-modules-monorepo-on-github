@@ -35,6 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Prepare and release'
     steps:
+      - run: |
+          cat << EOF > /dev/null
+            ${{ toJson(github) }}
+          EOF
+
       - name: Checkout
         uses: actions/checkout@v4
 
