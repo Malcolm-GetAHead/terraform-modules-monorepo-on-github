@@ -360,7 +360,7 @@ jobs:
             declare -A trivy_ignored
             rtn_chk=0
             
-            which checkov
+            which trivy
             
             while read -r tf_dir; do
               if [ -d "$tf_dir" ]; then
@@ -587,6 +587,7 @@ jobs:
         id: version_tags
         uses: actions/github-script@v7
         with:
+          result-encoding: string
           script: |
             const { owner, repo } = context.repo;
             const query = `query($owner: String!, $repo: String!, $refPrefix: String!) {
@@ -620,6 +621,49 @@ jobs:
             }
             return versions;
 
+      - name: Extract changelog entry
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: prInfo } = await github.rest.pulls.get({
+              owner, repo,
+              pull_number: context.issue.number,
+            });
+            console.log('Found PR body:|');
+            console.log(prInfo.body);
+            const changelogEntry = ((prInfo.body
+              .split(/^#+ ?/m)
+              .find(x => x.startsWith('Changelog'))
+              || '').split(/^```/m)[1] || '').trim();
+            if (!changelogEntry)
+              throw `'Changelog' section not found in PR body! Please add it back.`;
+            if (changelogEntry.match(/^TODO:/m))
+              throw `'Changelog' section needs proper text, instead of 'TODO'`;
+            return `* PR [#${ prInfo.number }](${ prInfo.html_url }) - ${ prInfo.title }
+            \`\`\`
+            ${changelogEntry}
+            \`\`\`
+            `
+
+      - name: Document example 'source' line
+        id: source_example
+        run: |
+          cat <<'EOF'
+          # Module Location
+          To use this module in your Terraform, use the below source value.
+          ```hcl
+          module "__MODULE_DIR__" {
+            source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
+            # also any inputs for the module (see below)
+          }
+          ```
+          EOF
+
       - name: Test
-        run: echo "${{ steps.version_tags.outputs }}"
+        run: |
+          echo "${{ steps.version_tags.outputs }}"
+          echo "${{ steps.changelog.outputs }}"
+          echo "${{ steps.source_example.outputs }}"
 
