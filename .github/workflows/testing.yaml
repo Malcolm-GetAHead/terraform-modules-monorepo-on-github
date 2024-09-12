@@ -809,13 +809,16 @@ jobs:
           ${{ github.event.pull_request.title }}
           EOF
           message="$(echo $message | tr -d '\n')"
-          description= <<EOF
+          description=<<EOF
           ${{ steps.changelog.outputs.changelog }}
           EOF
 
           version_json=<<EOF
           ${{ steps.version_tags.outputs.versions }}
           EOF
+
+          echo "${message}"
+          echo "${description}"
 
           version=$(jq -r '."test".newVer' <<< "$version_json")
           version_prev=$(jq -r '."test".prevVer' <<< "$version_json")
@@ -842,7 +845,7 @@ jobs:
               tmp_dir=$(mktemp -d)
               mv "${tf_dir}"/* "${tmp_dir}"
 
-              if [ get tag -l "${tag_prev}" 2>&1 > /dev/null ]; then
+              if [ git tag -l "${tag_prev}" 2>&1 > /dev/null ]; then
                 git checkout -f "{tag_prev}"
               else
                 git checkout -f "${run_ref}"
@@ -850,7 +853,7 @@ jobs:
 
               git checkout -b "${tmp_branch}"
 
-              find . -maxdepth 1 ! -name '.git' -exec rm -rf {} \;
+              find . -maxdepth 1 ! -name '.git' ! -name '.' ! -name '..' -exec rm -rf {} \;
 
               mv "${tmp_dir}"/* .
               rm -rf "${tmp_dir}"
