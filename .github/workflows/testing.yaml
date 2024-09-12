@@ -60,6 +60,7 @@ jobs:
           key: tfcache-${{ hashFiles('.github/dependencies/*') }}
 
       - name: Terraform Plugin Cache
+        if: ! env.is-merge-event
         uses: actions/cache@v4
         id: tf-cache
         with:
@@ -73,6 +74,11 @@ jobs:
           mkdir -p "${{ github.workspace }}/.cache" "${{ env.TF_PLUGIN_CACHE_DIR }}" "${{ env.TFLINT_PLUGIN_DIR }}"
 
       - name: TF Dependencies
+        if: steps.tf-tools-cache.outputs.cache-hit != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WS_DIR: ${{ github.workspace }}
+          TFLINT_PLUGIN_DIR: ${{ env.TFLINT_PLUGIN_DIR }}
         run: |
             export PATH="${{ github.workspace }}/.local/bin:${PATH}"
             for x in "${{ github.workspace }}"/.github/dependencies/*sh; do
@@ -80,11 +86,6 @@ jobs:
               $x
               echo "---"
             done
-        if: steps.tf-tools-cache.outputs.cache-hit != 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          WS_DIR: ${{ github.workspace }}
-          TFLINT_PLUGIN_DIR: ${{ env.TFLINT_PLUGIN_DIR }}
 
       - name: Get PR Labels and changed dirs
         id: pr_details
@@ -108,6 +109,7 @@ jobs:
               ${{ steps.pr_details.outputs.path_error }}
 
       - name: Terraform Format
+        if: ! env.is-merge-event
         id: tf_format
         run: |
           declare -a tf_fmt
@@ -140,8 +142,8 @@ jobs:
           echo "Output: ${output}"
 
       - name: Fail on invalid TF Format
+        if: ! env.is-merge-event && steps.tf_format.outputs.exit != 0
         uses: ./.github/actions/pr-comment
-        if: steps.tf_format.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -166,6 +168,7 @@ jobs:
               </details>
 
       - name: Terraform Init
+        if: ! env.is-merge-event
         id: tf_init
         run: |
             declare -a tf_init
@@ -204,8 +207,8 @@ jobs:
             echo "Output: ${output}"
 
       - name: Fail on invalid TF Init
+        if: ! env.is-merge-event && steps.tf_init.outputs.exit != 0
         uses: ./.github/actions/pr-comment
-        if: steps.tf_init.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -230,6 +233,7 @@ jobs:
               </details>
 
       - name: Terraform Validate
+        if: ! env.is-merge-event
         id: tf_validate
         run: |
             declare -a tf_val
@@ -269,7 +273,7 @@ jobs:
 
       - name: Fail on invalid TF Validate
         uses: ./.github/actions/pr-comment
-        if: steps.tf_validate.outputs.exit != 0
+        if: ! env.is-merge-event && steps.tf_validate.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -294,6 +298,7 @@ jobs:
               </details>
       
       - name: TF Lint
+        if: ! env.is-merge-event
         id: tf_lint
         run: |
             declare -a tf_lint
@@ -327,7 +332,7 @@ jobs:
 
       - name: Fail on invalid TFlint
         uses: ./.github/actions/pr-comment
-        if: steps.tf_lint.outputs.exit != 0
+        if: ! env.is-merge-event && steps.tf_lint.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -352,6 +357,7 @@ jobs:
               </details>
 
       - name: Trivy config scan
+        if: ! env.is-merge-event
         id: trivy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -405,6 +411,7 @@ jobs:
             echo "Output: ${output}"
 
       - name: Checkov scan
+        if: ! env.is-merge-event
         id: checkov
         run: |
             declare -A checkov_scan
@@ -455,8 +462,8 @@ jobs:
             echo -e "Output: ${output}"
 
       - name: Security scan outputs
+        if: ! env.is-merge-event && (steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0)
         uses: ./.github/actions/pr-comment
-        if: steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit_sha: ${{ github.event.after }}
@@ -541,8 +548,8 @@ jobs:
       #       echo -e "Plan Output: ${plan_output}"
 
       - name: Label PR with module name
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
-        if: ${{ github.event_name == 'pull_request' }}
         with:
           script: |
             github.rest.issues.addLabels({
@@ -597,28 +604,6 @@ jobs:
             core.setOutput('versions', versions);
             core.setOutput('out_string', out_string);
 
-      - name: Extract changelog entry
-        id: changelog
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const { data: prInfo } = await github.rest.pulls.get({
-              owner, repo,
-              pull_number: context.issue.number,
-            });
-            console.log('Found PR body:|');
-            console.log(prInfo.body);
-            const changelogEntry = ((prInfo.body
-              .split(/^#+ ?/m)
-              .find(x => x.startsWith('Changelog'))
-              || '').split(/^```/m)[1] || '').trim();
-            if (!changelogEntry)
-              throw `'Changelog' section not found in PR body! Please add it back.`;
-            if (changelogEntry.match(/^TODO:/m))
-              throw `'Changelog' section needs proper text, instead of 'TODO'`;
-            core.setOutput('changelog', changelogEntry);
-
       - name: Document example 'source' line
         id: source_example
         run: |
@@ -637,10 +622,8 @@ jobs:
             echo "EOF"
           }  >> "$GITHUB_OUTPUT"
 
-
-      
-
       - name: Build Summary Comment
+        if: ! env.is-merge-event
         uses: ./.github/actions/pr-comment
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -666,7 +649,9 @@ jobs:
               <summary>
               <h3>Commits</h3>
               </summary>
+
               ${{ steps.pr_details.outputs.commits }}
+              
               </details>
                             
 
@@ -674,12 +659,39 @@ jobs:
               <summary>
               <h3>Trivy Skipped Checks</h3>
               </summary>
+              
               ${{ steps.trivy.outputs.ignored }}
+              
               </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
 
               <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
               <summary>
               <h3>Checkov Skipped Checks</h3>
               </summary>
+              
               ${{ steps.checkov.outputs.ignored }}
+              
               </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
+
+      - name: Extract changelog entry
+        if: env.is-merge-event
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: prInfo } = await github.rest.pulls.get({
+              owner, repo,
+              pull_number: context.issue.number,
+            });
+            console.log('Found PR body:|');
+            console.log(prInfo.body);
+            const changelogEntry = ((prInfo.body
+              .split(/^#+ ?/m)
+              .find(x => x.startsWith('Changelog'))
+              || '').split(/^```/m)[1] || '').trim();
+            if (!changelogEntry)
+              throw `'Changelog' section not found in PR body! Please add it back.`;
+            if (changelogEntry.match(/^TODO:/m))
+              throw `'Changelog' section needs proper text, instead of 'TODO'`;
+            core.setOutput('changelog', changelogEntry);
