@@ -561,24 +561,45 @@ jobs:
               |✅|✅|✅|✅|✅|✅|
 
 
-
+              <details>
+              
               <summary>
+              
               <h3> Terraform Plan </h3>
+              
               </summary>
+              
               <b>Plan is best effort!</b>
+
+
               ```
               ${{ steps.tf_compliance.outputs.plan_output }}
               ```
+
+              
               </summary>
 
+              </details>
+
+              <details>
+
               <summary>
+              
               <h3> Terraform Compliance Check </h3>
+              
               </summary>
+              
               <b>Compliance check is best effort!</b>
+              
+
               ```
               ${{ steps.tf_compliance.outputs.output }}
               ```
+              
+              
               </summary>
+
+              </details>
 
 
 # <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
