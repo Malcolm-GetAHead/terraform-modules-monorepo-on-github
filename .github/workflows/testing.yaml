@@ -831,6 +831,7 @@ jobs:
           while read -r tf_dir; do
 
             git checkout -f "${run_ref}"
+            git fetch --tags
 
             if [ -d "$tf_dir" ]; then
 
