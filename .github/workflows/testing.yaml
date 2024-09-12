@@ -745,8 +745,8 @@ jobs:
             const msgParts = [];
             let error = "";
 
-            const versions = JSON.parse(`${{ steps.version_tags.outputs.versions }}`);
-            const tf_docs = JSON.parse(`${{ steps.tf_docs.outputs.docs_json }}`);
+            const versions = JSON.parse(JSON.stringify((`${{ steps.version_tags.outputs.versions }}`));
+            const tf_docs = JSON.parse(JSON.stringify((`${{ steps.tf_docs.outputs.docs_json }}`));
             
             const newPage = `
             Replace with an introduction about the module!
