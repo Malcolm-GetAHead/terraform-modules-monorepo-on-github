@@ -173,7 +173,7 @@ jobs:
         run: |
             declare -a tf_init
             rtn_chk=0
-            init_dir=$(pwd)
+            init_dir="${{ github.workspace }}"
 
             which terraform
 
@@ -238,7 +238,7 @@ jobs:
         run: |
             declare -a tf_val
             rtn_chk=0
-            init_dir=$(pwd)
+            init_dir="${{ github.workspace }}"
 
             which terraform
 
@@ -505,7 +505,7 @@ jobs:
       #       declare -A compliance_scan
       #       declare -A tfplan_output
       #       rtn_chk=0
-      #       init_dir=$(pwd)
+      #       init_dir="${{ github.workspace }}"
 
       #       which terraform-compliance terraform
             
@@ -656,7 +656,7 @@ jobs:
               </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
 
       - name: Extract changelog entry
-        if: env.is-merge-event
+        if: env.is-merge-event == 'true'
         id: changelog
         uses: actions/github-script@v7
         with:
@@ -696,8 +696,38 @@ jobs:
       # --sort-by required \
       # 'src/${{ inputs.moduleRootDirectory }}'
 
+      - name: Generate TF Docs
+        id: tf_docs
+        run: |
+            declare -A tfdoc_output
+            rtn_chk=0
+            init_dir="${{ github.workspace }}"
+
+            which terraform-docs
+            
+            while read -r tf_dir; do
+              if [ -d "${init_dir}/${tf_dir}" ]; then
+                tfdoc_output["$tf_dir"]="$(terraform-docs markdown table --sort-by required --sort-by name "${init_dir}/${tf_dir}" 2>&1 || true)"
+              else
+                compliance_scan["$tf_dir"]="  Unable to check directory"
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+
+            json=$(for key in "${!tfdoc_output[@]}"; do
+              jq -n --arg key "$key" --arg value "${tfdoc_output[$key]}" \
+                '{($key): $value}'
+            done | jq -s 'add')
+
+            {
+              echo "json<<EOF"
+              echo -e "$json"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+
+            echo -e "JSON: ${json}"
+
       - name: Checkout wiki
-        if: env.is-merge-event
+        if: env.is-merge-event == 'true'
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}.wiki
@@ -706,7 +736,7 @@ jobs:
           fetch-depth: 0
           
       - uses: actions/github-script@v7
-        if: env.is-merge-event
+        if: env.is-merge-event == 'true'
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -792,6 +822,7 @@ jobs:
           result-encoding: string
 
       - name: Push changes to wiki
+        if: env.is-merge-event == 'true'
         working-directory: "${{ github.workspace }}/wiki"
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
