@@ -822,9 +822,6 @@ jobs:
 
           echo "message: ${message}"
           echo "description: ${description}"
-
-          version=$(jq -r '."test".newVer' <<< "$version_json")
-          version_prev=$(jq -r '."test".prevVer' <<< "$version_json")
           
           IFS='.' read -r -a version_parts <<< "$version"
 
@@ -836,6 +833,9 @@ jobs:
           while read -r tf_dir; do
 
             if [ -d "$tf_dir" ]; then
+
+              version=$(jq -r '."'"$tf_dir"'".newVer' <<< "$version_json")
+              version_prev=$(jq -r '."'"$tf_dir"'".prevVer' <<< "$version_json")
 
               git checkout -f "${run_ref}"
 
