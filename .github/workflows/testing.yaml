@@ -605,7 +605,7 @@ jobs:
               });
               const prevNode = result.repository.refs.edges[0];
               const prevVer = prevNode ? prevNode.node.name.substring(1) : '0.0.0';
-              console.log('Found previous version ${tf_modules[i]}', prevVer);
+              console.log(`Found previous version ${tf_modules[i]}: prevVer`);
 
               const newVer = prevVer.split('.');
               const newVerIdx = ['major', 'minor', 'patch'].indexOf("${{ steps.pr_details.outputs.release_label }}");
@@ -613,6 +613,7 @@ jobs:
               for (let i = newVerIdx + 1; i < newVer.length; i++) {
                 newVer[i] = 0;
               }
+              console.log(`Generated new version ${tf_modules[i]}: newVer`);
 
               versions[tf_modules[i]] = {
                 prevVer: prevVer,
@@ -653,22 +654,24 @@ jobs:
           {
             echo "source<<EOF"
             cat <<'EOF'
-            # Module Location
-            To use this module in your Terraform, use the below source value.
-            ```hcl
-            module "__MODULE_DIR__" {
-              source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
-              # also any inputs for the module (see below)
-            }
-            ```
-            EOF
+          # Module Location
+          To use this module in your Terraform, use the below source value.
+          ```hcl
+          module "__MODULE_DIR__" {
+            source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
+            # also any inputs for the module (see below)
+          }
+          ```
+          EOF
             echo "EOF"
           }  >> "$GITHUB_OUTPUT"
 
 
       - name: Test
         run: |
-          echo "${{ toJson(steps.version_tags.outputs) }}"
-          echo "${{ toJson(steps.changelog.outputs) }}"
-          echo "${{ toJson(steps.source_example.outputs) }}"
+          cat <<'TLD'
+          "${{ toJson(steps.version_tags.outputs) }}"
+          "${{ toJson(steps.changelog.outputs) }}"
+          "${{ toJson(steps.source_example.outputs) }}"
+          TLD
 
