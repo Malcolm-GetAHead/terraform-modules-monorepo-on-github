@@ -92,7 +92,7 @@ jobs:
         uses: ./.github/actions/pr-details
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          pr_url: ${{github.event.pull_request.html_url}}
+          pr_url: ${{ github.event.pull_request.html_url }}
           
       - name: Fail on invalid PR details
         uses: ./.github/actions/pr-comment
@@ -604,24 +604,6 @@ jobs:
             core.setOutput('versions', versions);
             core.setOutput('out_string', out_string);
 
-      - name: Document example 'source' line
-        id: source_example
-        run: |
-          {
-            echo "source<<EOF"
-            cat <<'EOF'
-          # Module Location
-          To use this module in your Terraform, use the below source value.
-          ```hcl
-          module "__MODULE_DIR__" {
-            source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
-            # also any inputs for the module (see below)
-          }
-          ```
-          EOF
-            echo "EOF"
-          }  >> "$GITHUB_OUTPUT"
-
       - name: Build Summary Comment
         if: env.is-merge-event == 'false'
         uses: ./.github/actions/pr-comment
@@ -684,14 +666,136 @@ jobs:
               owner, repo,
               pull_number: context.issue.number,
             });
-            console.log('Found PR body:|');
-            console.log(prInfo.body);
+
+            console.log(`Found PR body:|\n${prInfo.body}`);
+
             const changelogEntry = ((prInfo.body
               .split(/^#+ ?/m)
               .find(x => x.startsWith('Changelog'))
               || '').split(/^```/m)[1] || '').trim();
-            if (!changelogEntry)
-              throw `'Changelog' section not found in PR body! Please add it back.`;
-            if (changelogEntry.match(/^TODO:/m))
-              throw `'Changelog' section needs proper text, instead of 'TODO'`;
+
+            let changelog_error = "";
+
+            if (!changelogEntry || changelogEntry === '') {
+              changelog_error = `'Changelog' section not found in PR body! Please add it back.`;
+            }
+
+            if (changelogEntry.match(/^TODO:/m)) {
+              changelog_error = `'Changelog' section needs proper text, instead of 'TODO'`;
+            }
+
+            console.log(`Changelog comment:|\n${changelogEntry}`);
+
             core.setOutput('changelog', changelogEntry);
+            core.setOutput('changelog_error', changelog_error);
+
+#run tf-docs
+#          echo '# Module Attributes' >> output/documentation.md
+      # ./terraform-docs markdown table \
+      # --output-file "$(pwd)"/output/documentation.md \
+      # --sort-by required \
+      # 'src/${{ inputs.moduleRootDirectory }}'
+
+      - name: Checkout wiki
+        if: env.is-merge-event
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: "${{ github.workspace }}/wiki"
+          fetch-depth: 0
+          
+      - uses: actions/github-script@v7
+        if: env.is-merge-event
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { readdir, readFile, writeFile, mkdirSync } = require('fs').promises;
+            const utf8 = { encoding: 'utf-8' };
+            const msgParts = [];
+            let error = "";
+
+            const versions = JSON.parse(`${{ steps.version_tags.outputs.versions }}`);
+            const tf_docs = JSON.parse(`${{ steps.tf_docs.ouputs.td_docs }}`);
+            
+            const newPage = `
+            Replace with an introduction about the module!
+            Text and markdown up here will be preserved over time,
+            while the rest of the wiki page is generated from the release process.
+
+            # Module Location
+            
+            To use this module in your Terraform, use the below source value.
+            
+            \`\`\`hcl
+            module "__MODULE_DIR__" {
+              source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
+              # also any inputs for the module (see below)
+            }
+            \`\`\`
+            
+            __WARNING: Sections below this comment will be replaced and/or added to automatically.__
+            `;
+
+            try {
+                mkdirSync('${{ github.workspace }}/wiki/generated')
+            } catch (err) {
+              if (err.code !== 'EEXIST') { error = JSON.stringify(err); }
+              return;
+            }
+            
+            for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
+
+              const newVersion = versions[folder].newVer;
+
+              const readText = (name) => readFile(name, utf8).then(x => x.trim());
+              const wikiPath = `wiki/generated/${folder}.md`;
+              const prevWiki = await readText(wikiPath)
+                .catch(err => err.code === 'ENOENT' ? newPage.replace('__MODULE_DIR_', folder).replace('__MODULE_VERSION__', newVersion) : Promise.reject(err));
+              
+              if (!prevWiki) { console.warn('Starting new wiki page for', folder); }
+              
+              const docs = tf_docs[folder];
+              const changelog = `
+              
+              * PR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }}
+              
+              \`\`\`
+              ${{ steps.changelog.outputs.changelog }}
+              \`\`\`
+              `;
+              
+              let newWiki = prevWiki;
+              if (!newWiki.match(/^<!-- BEGIN DOCS -->$/m)) {
+                newWiki += `\n<!-- BEGIN DOCS -->\n<!-- END DOCS -->\n`;
+              }
+              
+              newWiki = newWiki.replace(/^<!-- BEGIN DOCS -->$[^]+^<!-- END DOCS -->$/m,
+                `<!-- BEGIN DOCS -->\n${docs}\n<!-- END DOCS -->`);
+              
+              if (!newWiki.match(/^<!-- CHANGELOG MARKER -->$/m)) {
+                newWiki += `\n\n# Changelog\n<!-- CHANGELOG MARKER -->\n`;
+              }
+              
+              const changelogHeader = `## ${newVersion} (${new Date().toISOString().split('T')[0]})`
+              
+              newWiki = newWiki.replace(/^<!-- CHANGELOG MARKER -->$/m,
+                `<!-- CHANGELOG MARKER -->\n${changelogHeader}\n${changelog}\n`);
+              
+              await writeFile(wikiPath, newWiki, utf8);
+              
+              msgParts.push(`${folder} @ ${newVersion}`);
+              
+              console.log(`Updated ${folder} @ ${newVersion}`);
+            }
+            return msgParts.join(', ');
+          result-encoding: string
+
+      - name: Push changes to wiki
+        working-directory: "${{ github.workspace }}/wiki"
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "${{ steps.write-changes.outputs.result }}"
+          git push
