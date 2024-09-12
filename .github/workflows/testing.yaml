@@ -830,14 +830,14 @@ jobs:
 
           while read -r tf_dir; do
 
+            git checkout -f "${run_ref}"
+
             if [ -d "$tf_dir" ]; then
 
               version=$(jq -r '."'"$tf_dir"'".newVer' <<< "$version_json")
               version_prev=$(jq -r '."'"$tf_dir"'".prevVer' <<< "$version_json")
 
               IFS='.' read -r -a version_parts <<< "$version"
-
-              git checkout -f "${run_ref}"
 
               tmp_branch="tmp_${tf_dir}_v${version}"
               tag_prev="${tf_dir}/v${version_prev}"
