@@ -540,37 +540,6 @@ jobs:
       #       echo -e "Output: ${output}"
       #       echo -e "Plan Output: ${plan_output}"
 
-      - name: CICD Checks Complete PR comment
-        uses: ./.github/actions/pr-comment
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-
-              ✨ CICD Run Completed successfully!
-
-              |Format|Init|Validate|Lint|Trivy|Checkov|
-              |-|-|-|-|-|-|
-              |✅|✅|✅|✅|✅|✅|
-
-
-              <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
-              <summary>
-              <h3>Trivy Skipped Checks</h3>
-              </summary>
-              ${{ steps.trivy.outputs.ignored }}
-              </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
-
-              <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
-              <summary>
-              <h3>Checkov Skipped Checks</h3>
-              </summary>
-              ${{ steps.checkov.outputs.ignored }}
-              </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
-
       - name: Label PR with module name
         uses: actions/github-script@v7
         if: ${{ github.event_name == 'pull_request' }}
@@ -620,7 +589,13 @@ jobs:
                 newVer: newVer.join('.')
               };
             }
+            let out_string = "";
+            for(var mod in versions) {
+              out_string += `| ${mod} | ${versions[mod].prevVer} | ${versions[mod].newVer} |
+              `;
+            }
             core.setOutput('versions', versions);
+            core.setOutput('out_string', outstring);
 
       - name: Extract changelog entry
         id: changelog
@@ -642,11 +617,7 @@ jobs:
               throw `'Changelog' section not found in PR body! Please add it back.`;
             if (changelogEntry.match(/^TODO:/m))
               throw `'Changelog' section needs proper text, instead of 'TODO'`;
-            core.setOutput('changelog', `* PR [#${ prInfo.number }](${ prInfo.html_url }) - ${ prInfo.title }
-            \`\`\`
-            ${changelogEntry}
-            \`\`\`
-            `);
+            core.setOutput('changelog', changelogEntry);
 
       - name: Document example 'source' line
         id: source_example
@@ -667,11 +638,40 @@ jobs:
           }  >> "$GITHUB_OUTPUT"
 
 
-      - name: Test
-        run: |
-          cat <<'TLD'
-          "${{ toJson(steps.version_tags.outputs) }}"
-          "${{ toJson(steps.changelog.outputs) }}"
-          "${{ toJson(steps.source_example.outputs) }}"
-          TLD
+      
 
+      - name: Build Summary Comment
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+
+              ✨ CICD Run Completed successfully!
+
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|✅|✅|✅|
+
+
+              ## Release Plan
+              | Module | Previous version | New version |
+              |--|--|--|
+              ${{ steps.version_tags.outputs.out_string }}
+
+              <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
+              <summary>
+              <h3>Trivy Skipped Checks</h3>
+              </summary>
+              ${{ steps.trivy.outputs.ignored }}
+              </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
+
+              <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
+              <summary>
+              <h3>Checkov Skipped Checks</h3>
+              </summary>
+              ${{ steps.checkov.outputs.ignored }}
+              </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
