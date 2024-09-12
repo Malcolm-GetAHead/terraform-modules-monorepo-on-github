@@ -509,8 +509,8 @@ jobs:
             while read -r tf_dir; do
               if [ -d "${init_dir}/${tf_dir}" ]; then
                 cd "${init_dir}/${tf_dir}"
-                tfplan_output["$tf_dir"]="$(terraform plan -out tf.plan || true)"
-                compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan || true)"
+                tfplan_output["$tf_dir"]="$(terraform plan -no-color -out tf.plan 2>&1 || true)"
+                compliance_scan["$tf_dir"]="$(terraform-compliance -f "$TF_COMPLIANCE_DIR" -p tf.plan 2>&1 | cat || true)"
               else
                 compliance_scan["$tf_dir"]="  Unable to check directory"
               fi
