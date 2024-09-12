@@ -716,7 +716,7 @@ jobs:
             json=$(for key in "${!tfdoc_output[@]}"; do
               jq -n --arg key "$key" --arg value "${tfdoc_output[$key]}" \
                 '{($key): $value}'
-            done | jq -s 'add')
+            done | jq -rs 'add')
 
             {
               echo "docs_json<<EOF"
