@@ -827,15 +827,11 @@ jobs:
 
           cd "${{ github.workspace }}"
 
-          ls -l
-
           while read -r tf_dir; do
 
             if [ -d "$tf_dir" ]; then
 
               git checkout -f "${run_ref}"
-
-              ls -l
 
               tmp_branch="tmp_${tf_dir}_v${version}"
               tag_prev="${tf_dir}/v${version_prev}"
@@ -844,7 +840,7 @@ jobs:
               tag_minor="${tf_dir}/v${version_parts[0]}.${version_parts[1]}"
 
               tmp_dir=$(mktemp -d)
-              mv "${tf_dir}/*" "${tmp_dir}"
+              mv "${tf_dir}"/* "${tmp_dir}"
 
               if [ get tag -l "${tag_prev}" 2>&1 > /dev/null ]; then
                 git checkout -f "{tag_prev}"
