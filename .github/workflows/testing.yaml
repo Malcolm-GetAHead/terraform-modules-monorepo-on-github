@@ -366,6 +366,7 @@ jobs:
               if [ -d "$tf_dir" ]; then
                 rtn_val="$(trivy config --quiet --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
                 trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
+                echo "$trivy_ignored"
                 trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' | sed 's/^  [0-9]+ .*//g' || true)"
               else
                 trivy_scan["$tf_dir"]="  Unable to check directory"
