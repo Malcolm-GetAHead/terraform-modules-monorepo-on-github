@@ -822,8 +822,6 @@ jobs:
 
           echo "message: ${message}"
           echo "description: ${description}"
-          
-          IFS='.' read -r -a version_parts <<< "$version"
 
           run_ref="${{ github.sha }}"
           echo "runref: ${run_ref}"
@@ -836,6 +834,8 @@ jobs:
 
               version=$(jq -r '."'"$tf_dir"'".newVer' <<< "$version_json")
               version_prev=$(jq -r '."'"$tf_dir"'".prevVer' <<< "$version_json")
+
+              IFS='.' read -r -a version_parts <<< "$version"
 
               git checkout -f "${run_ref}"
 
