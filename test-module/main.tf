@@ -18,5 +18,4 @@ resource "aws_s3_bucket" "test" {
   #checkov:skip=CKV_AWS_21
   #checkov:skip=CKV_AWS_18
   bucket = "bucket"
-  
 }
