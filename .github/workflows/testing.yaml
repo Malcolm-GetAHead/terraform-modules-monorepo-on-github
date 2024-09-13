@@ -87,15 +87,19 @@ jobs:
 
             console.log(`Found PR body:|\n${prInfo.body}`);
 
+            try {
             const changelogEntry = ((prInfo.body
               .split(/^#+ ?/m)
               .find(x => x.startsWith('Changelog'))
               || '').split(/^```/m)[1] || '').trim();
+            } catch(error) {
+              const changelogEntry = "";
+            }
 
             let changelog_error = "";
 
             if (!changelogEntry || changelogEntry === '') {
-              changelog_error = `'Changelog' section not found in PR body! Please add it back.`;
+              changelog_error = `'Changelog' section not found in PR body! See ".github/pull_request_template.md" for an example`;
             }
 
             if (changelogEntry.match(/^TODO:/m)) {
