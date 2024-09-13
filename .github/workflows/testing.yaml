@@ -95,7 +95,7 @@ jobs:
             let changelog_error = "";
 
             if (!changelogEntry || changelogEntry === '') {
-              changelog_error = `'Changelog' section not found in PR body! See ".github/pull_request_template.md" for an example`;
+              changelog_error = "'Changelog' section not found in PR body! See [.github/pull_request_template.md](../blob/master/.github/pull_request_template.md) for an example.";
             }
 
             if (changelogEntry.match(/^TODO:/m)) {
