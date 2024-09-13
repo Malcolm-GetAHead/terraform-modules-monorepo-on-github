@@ -87,14 +87,10 @@ jobs:
 
             console.log(`Found PR body:|\n${prInfo.body}`);
 
-            try {
-            const changelogEntry = ((prInfo.body
+            const changelogEntry = prInfo.body ? ((prInfo.body
               .split(/^#+ ?/m)
               .find(x => x.startsWith('Changelog'))
-              || '').split(/^```/m)[1] || '').trim();
-            } catch(error) {
-              const changelogEntry = "";
-            }
+              || '').split(/^```/m)[1] || '').trim() : '';
 
             let changelog_error = "";
 
