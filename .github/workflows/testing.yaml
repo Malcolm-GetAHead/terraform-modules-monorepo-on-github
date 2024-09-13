@@ -147,414 +147,414 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           pr_url: ${{ github.event.pull_request.html_url }}
           
-      # - name: Fail on invalid PR details
-      #   uses: ./.github/actions/pr-comment
-      #   if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     fail_run: true
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
-      #         ${{ steps.pr_details.outputs.label_error }}
-      #         ${{ steps.pr_details.outputs.path_error }}
+      - name: Fail on invalid PR details
+        uses: ./.github/actions/pr-comment
+        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+              ${{ steps.pr_details.outputs.label_error }}
+              ${{ steps.pr_details.outputs.path_error }}
 
-      # - name: Terraform Format
-      #   if: env.is-merge-event == 'false'
-      #   id: tf_format
-      #   run: |
-      #     declare -a tf_fmt
-      #     rtn_chk=0
+      - name: Terraform Format
+        if: env.is-merge-event == 'false'
+        id: tf_format
+        run: |
+          declare -a tf_fmt
+          rtn_chk=0
 
-      #     which terraform
+          which terraform
 
-      #     while read -r tf_dir; do
-      #       if [ -d "$tf_dir" ]; then
-      #         tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir" 2>&1)")
-      #       else
-      #         tf_fmt+=("Unable to check directory: '${tf_dir}'")
-      #       fi
-      #     done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+          while read -r tf_dir; do
+            if [ -d "$tf_dir" ]; then
+              tf_fmt+=("$(terraform fmt -write=false -diff -no-color "$tf_dir" 2>&1)")
+            else
+              tf_fmt+=("Unable to check directory: '${tf_dir}'")
+            fi
+          done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
           
-      #     output=$(printf "%s\n" "${tf_fmt[@]}")
+          output=$(printf "%s\n" "${tf_fmt[@]}")
 
-      #     if [ "$(echo $output | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #       rtn_chk=1
-      #     fi
+          if [ "$(echo $output | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+            rtn_chk=1
+          fi
           
-      #     echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
-      #     {
-      #       echo "output<<EOF"
-      #       echo "$output"
-      #       echo "EOF"
-      #     }  >> $GITHUB_OUTPUT
+          echo "exit=${rtn_chk}"  >> $GITHUB_OUTPUT
+          {
+            echo "output<<EOF"
+            echo "$output"
+            echo "EOF"
+          }  >> $GITHUB_OUTPUT
 
-      #     echo "Exit: ${rtn_chk}"
-      #     echo "Output: ${output}"
+          echo "Exit: ${rtn_chk}"
+          echo "Output: ${output}"
 
-      # - name: Fail on invalid TF Format
-      #   if: env.is-merge-event == 'false' && steps.tf_format.outputs.exit != 0
-      #   uses: ./.github/actions/pr-comment
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     fail_run: true
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: Fail on invalid TF Format
+        if: env.is-merge-event == 'false' && steps.tf_format.outputs.exit != 0
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |❌||||||
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |❌||||||
 
-      #         <details>
-      #         <summary>
-      #         <h3>Terraform Format Error</h3>
-      #         </summary>
+              <details>
+              <summary>
+              <h3>Terraform Format Error</h3>
+              </summary>
               
-      #         ```diff
-      #         ${{ steps.tf_format.outputs.output }}
-      #         ```
-      #         </details>
+              ```diff
+              ${{ steps.tf_format.outputs.output }}
+              ```
+              </details>
 
-      # - name: Terraform Init
-      #   if: env.is-merge-event == 'false'
-      #   id: tf_init
-      #   run: |
-      #       declare -a tf_init
-      #       rtn_chk=0
-      #       init_dir="${{ github.workspace }}"
+      - name: Terraform Init
+        if: env.is-merge-event == 'false'
+        id: tf_init
+        run: |
+            declare -a tf_init
+            rtn_chk=0
+            init_dir="${{ github.workspace }}"
 
-      #       which terraform
+            which terraform
 
-      #       while read -r tf_dir; do
-      #         if [ -d "$init_dir/$tf_dir" ]; then
-      #           cd "$init_dir/$tf_dir" || exit 1
+            while read -r tf_dir; do
+              if [ -d "$init_dir/$tf_dir" ]; then
+                cd "$init_dir/$tf_dir" || exit 1
               
-      #           rtn_val="$(terraform init -backend=false -no-color 2>&1 || true)"
-      #           if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
-      #             tf_init+=("$rtn_val")
-      #           fi
-      #         else
-      #           tf_init+=("Unable to check directory: '${tf_dir}'")
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+                rtn_val="$(terraform init -backend=false -no-color 2>&1 || true)"
+                if ! grep -q 'Terraform has been successfully initialized' <<< "$rtn_val"; then
+                  tf_init+=("$rtn_val")
+                fi
+              else
+                tf_init+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       output=$(printf "%s\n" "${tf_init[@]}")
+            output=$(printf "%s\n" "${tf_init[@]}")
 
-      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo "$output"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
 
-      # - name: Fail on invalid TF Init
-      #   if: env.is-merge-event == 'false' && steps.tf_init.outputs.exit != 0
-      #   uses: ./.github/actions/pr-comment
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     fail_run: true
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: Fail on invalid TF Init
+        if: env.is-merge-event == 'false' && steps.tf_init.outputs.exit != 0
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |✅|❌|||||
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|❌|||||
 
-      #         <details>
-      #         <summary>
-      #         <h3>Terraform Init Error</h3>
-      #         </summary>
+              <details>
+              <summary>
+              <h3>Terraform Init Error</h3>
+              </summary>
               
-      #         ```
-      #         ${{ steps.tf_init.outputs.output }}
-      #         ```
-      #         </details>
+              ```
+              ${{ steps.tf_init.outputs.output }}
+              ```
+              </details>
 
-      # - name: Terraform Validate
-      #   if: env.is-merge-event == 'false'
-      #   id: tf_validate
-      #   run: |
-      #       declare -a tf_val
-      #       rtn_chk=0
-      #       init_dir="${{ github.workspace }}"
+      - name: Terraform Validate
+        if: env.is-merge-event == 'false'
+        id: tf_validate
+        run: |
+            declare -a tf_val
+            rtn_chk=0
+            init_dir="${{ github.workspace }}"
 
-      #       which terraform
+            which terraform
 
-      #       while read -r tf_dir; do
-      #         if [ -d "$init_dir/$tf_dir" ]; then
-      #           cd "$init_dir/$tf_dir" || exit 1
+            while read -r tf_dir; do
+              if [ -d "$init_dir/$tf_dir" ]; then
+                cd "$init_dir/$tf_dir" || exit 1
               
-      #           rtn_val="$(terraform validate -no-color 2>&1 || true)"
-      #           if ! grep -q 'The configuration is valid' <<< "$rtn_val"; then
-      #             tf_val+=("$rtn_val")
-      #           fi
-      #         else
-      #           tf_val+=("Unable to check directory: '${tf_dir}'")
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+                rtn_val="$(terraform validate -no-color 2>&1 || true)"
+                if ! grep -q 'The configuration is valid' <<< "$rtn_val"; then
+                  tf_val+=("$rtn_val")
+                fi
+              else
+                tf_val+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       output=$(printf "%s\n" "${tf_val[@]}")
+            output=$(printf "%s\n" "${tf_val[@]}")
 
-      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo "$output"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
 
-      # - name: Fail on invalid TF Validate
-      #   uses: ./.github/actions/pr-comment
-      #   if: env.is-merge-event == 'false' && steps.tf_validate.outputs.exit != 0
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     fail_run: true
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: Fail on invalid TF Validate
+        uses: ./.github/actions/pr-comment
+        if: env.is-merge-event == 'false' && steps.tf_validate.outputs.exit != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |✅|✅|❌||||
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|❌||||
 
-      #         <details>
-      #         <summary>
-      #         <h3>Terraform Validate Error</h3>
-      #         </summary>
+              <details>
+              <summary>
+              <h3>Terraform Validate Error</h3>
+              </summary>
               
-      #         ```
-      #         ${{ steps.tf_validate.outputs.output }}
-      #         ```
-      #         </details>
+              ```
+              ${{ steps.tf_validate.outputs.output }}
+              ```
+              </details>
       
-      # - name: TF Lint
-      #   if: env.is-merge-event == 'false'
-      #   id: tf_lint
-      #   run: |
-      #       declare -a tf_lint
-      #       rtn_chk=0
+      - name: TF Lint
+        if: env.is-merge-event == 'false'
+        id: tf_lint
+        run: |
+            declare -a tf_lint
+            rtn_chk=0
 
-      #       which tflint
+            which tflint
 
-      #       while read -r tf_dir; do
-      #         if [ -d "$tf_dir" ]; then
-      #           tf_lint+=("$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)")
-      #         else
-      #           tf_lint+=("Unable to check directory: '${tf_dir}'")
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                tf_lint+=("$(tflint -c "${{ github.workspace }}/.github/dependencies/tflint.hcl" -f compact --force --call-module-type=none --no-color --chdir "${tf_dir}" 2>&1 || true)")
+              else
+                tf_lint+=("Unable to check directory: '${tf_dir}'")
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       output=$(printf "%s\n" "${tf_lint[@]}")
+            output=$(printf "%s\n" "${tf_lint[@]}")
 
-      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo "$output"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo "$output"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo "Output: ${output}"
 
-      # - name: Fail on invalid TFlint
-      #   uses: ./.github/actions/pr-comment
-      #   if: env.is-merge-event == 'false' && steps.tf_lint.outputs.exit != 0
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     fail_run: true
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: Fail on invalid TFlint
+        uses: ./.github/actions/pr-comment
+        if: env.is-merge-event == 'false' && steps.tf_lint.outputs.exit != 0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |✅|✅|✅|❌|||
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|❌|||
 
-      #         <details>
-      #         <summary>
-      #         <h3>TFLint Error</h3>
-      #         </summary>
+              <details>
+              <summary>
+              <h3>TFLint Error</h3>
+              </summary>
               
-      #         ```
-      #         ${{ steps.tf_lint.outputs.output }}
-      #         ```
-      #         </details>
+              ```
+              ${{ steps.tf_lint.outputs.output }}
+              ```
+              </details>
 
-      # - name: Trivy config scan
-      #   if: env.is-merge-event == 'false'
-      #   id: trivy
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #       declare -A trivy_scan
-      #       declare -A trivy_ignored
-      #       rtn_chk=0
+      - name: Trivy config scan
+        if: env.is-merge-event == 'false'
+        id: trivy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            declare -A trivy_scan
+            declare -A trivy_ignored
+            rtn_chk=0
             
-      #       which trivy
+            which trivy
             
-      #       while read -r tf_dir; do
-      #         if [ -d "$tf_dir" ]; then
-      #           rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
-      #           trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
-      #           trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' | sed 's/^  [0-9]+ .*//g' || true)"
-      #         else
-      #           trivy_scan["$tf_dir"]="  Unable to check directory"
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                rtn_val="$(trivy config --cache-dir "${{env.TRIVY_CACHE_DIR }}" "${tf_dir}" 2>&1 || true)"
+                trivy_ignored["$tf_dir"]="$(echo "$rtn_val" | grep 'Ignore finding' | sed 's/^.*\]/   /g' || true)"
+                trivy_scan["$tf_dir"]="$(echo "$rtn_val" | grep -v 'INFO' | sed 's/\(.*\.tf\) (terraform)/<h4>\1 (terraform)<\/h4>/g' | sed 's/^=*$//g' | sed 's/^  [0-9]+ .*//g' || true)"
+              else
+                trivy_scan["$tf_dir"]="  Unable to check directory"
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       output=""
-      #       for key in "${!trivy_scan[@]}"; do
-      #         if [ "$(echo "${trivy_scan[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #           output+="<h3>Module: $key</h3> \n${trivy_scan[$key]}\n\n"
-      #         fi
-      #       done
-      #       ignored=""
-      #       for key in "${!trivy_ignored[@]}"; do
-      #         if [ "$(echo "${trivy_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #           ignored+="<h3>Module: <u>$key</u></h3> \n<pre>${trivy_ignored[$key]}</pre>\n\n"
-      #         fi
-      #       done
+            output=""
+            for key in "${!trivy_scan[@]}"; do
+              if [ "$(echo "${trivy_scan[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+                output+="<h3>Module: $key</h3> \n${trivy_scan[$key]}\n\n"
+              fi
+            done
+            ignored=""
+            for key in "${!trivy_ignored[@]}"; do
+              if [ "$(echo "${trivy_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+                ignored+="<h3>Module: <u>$key</u></h3> \n<pre>${trivy_ignored[$key]}</pre>\n\n"
+              fi
+            done
 
-      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo -e "$output"
-      #         echo "EOF"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo -e "$output"
+              echo "EOF"
 
-      #         echo "ignored<<EOF"
-      #         echo -e "$ignored"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+              echo "ignored<<EOF"
+              echo -e "$ignored"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo -e "Ignored: ${ignored}"
-      #       echo "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo -e "Ignored: ${ignored}"
+            echo "Output: ${output}"
 
-      # - name: Checkov scan
-      #   if: env.is-merge-event == 'false'
-      #   id: checkov
-      #   run: |
-      #       declare -A checkov_scan
-      #       declare -A checkov_ignored
-      #       rtn_chk=0
+      - name: Checkov scan
+        if: env.is-merge-event == 'false'
+        id: checkov
+        run: |
+            declare -A checkov_scan
+            declare -A checkov_ignored
+            rtn_chk=0
             
-      #       which checkov
+            which checkov
             
-      #       while read -r tf_dir; do
-      #         if [ -d "$tf_dir" ]; then
-      #           checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
-      #           checkov_scan["$tf_dir"]="$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results' || true)"
-      #         else
-      #           checkov_scan["$tf_dir"]="  Unable to check directory"
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+            while read -r tf_dir; do
+              if [ -d "$tf_dir" ]; then
+                checkov_ignored["$tf_dir"]="$(grep -r '#checkov:skip=' "${tf_dir}" || true)"
+                checkov_scan["$tf_dir"]="$(checkov --quiet -o github_failed_only -d "${tf_dir}" | grep -v 'Terraform Scan Results' || true)"
+              else
+                checkov_scan["$tf_dir"]="  Unable to check directory"
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       output=""
-      #       for key in "${!checkov_scan[@]}"; do
-      #         if [ "$(echo "${checkov_scan[$key]}" | grep -v -- '---' | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #           output+="<h3>Module: <u>$key</u></h3> \n${checkov_scan[$key]}\n\n"
-      #         fi
-      #       done
-      #       ignored=""
-      #       for key in "${!checkov_ignored[@]}"; do
-      #         if [ "$(echo "${checkov_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #           ignored+="<h3>Module: $key</h3> \n<pre>${checkov_ignored[$key]}</pre>\n\n"
-      #         fi
-      #       done
+            output=""
+            for key in "${!checkov_scan[@]}"; do
+              if [ "$(echo "${checkov_scan[$key]}" | grep -v -- '---' | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+                output+="<h3>Module: <u>$key</u></h3> \n${checkov_scan[$key]}\n\n"
+              fi
+            done
+            ignored=""
+            for key in "${!checkov_ignored[@]}"; do
+              if [ "$(echo "${checkov_ignored[$key]}" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+                ignored+="<h3>Module: $key</h3> \n<pre>${checkov_ignored[$key]}</pre>\n\n"
+              fi
+            done
 
-      #       if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
-      #         rtn_chk=1
-      #       fi
+            if [ "$(echo "$output" | tr -d '[:space:]' | tr -d '\n')" != "" ]; then
+              rtn_chk=1
+            fi
 
-      #       echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
-      #       {
-      #         echo "output<<EOF"
-      #         echo -e "$output"
-      #         echo "EOF"
+            echo "exit=${rtn_chk}"  >> "$GITHUB_OUTPUT"
+            {
+              echo "output<<EOF"
+              echo -e "$output"
+              echo "EOF"
 
-      #         echo "ignored<<EOF"
-      #         echo -e "$ignored"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+              echo "ignored<<EOF"
+              echo -e "$ignored"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo "Exit: ${rtn_chk}"
-      #       echo -e "Ignored: ${ignored}"
-      #       echo -e "Output: ${output}"
+            echo "Exit: ${rtn_chk}"
+            echo -e "Ignored: ${ignored}"
+            echo -e "Output: ${output}"
 
-      # - name: Security scan outputs
-      #   if: env.is-merge-event == 'false' && (steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0)
-      #   uses: ./.github/actions/pr-comment
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     fail_run: true
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: Security scan outputs
+        if: env.is-merge-event == 'false' && (steps.trivy.outputs.exit != 0 || steps.checkov.outputs.exit != 0)
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |✅|✅|✅|✅|${{ steps.trivy.outputs.exit == 0 && '✅' || '❌' }}|${{ steps.checkov.outputs.exit == 0 && '✅' || '❌' }}|
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|✅|${{ steps.trivy.outputs.exit == 0 && '✅' || '❌' }}|${{ steps.checkov.outputs.exit == 0 && '✅' || '❌' }}|
 
-      #         <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
-      #         <summary>
-      #         <h3>Trivy scan results</h3>
-      #         </summary>
-      #         ${{ steps.trivy.outputs.output }}
-      #         </details${{ steps.trivy.outputs.exit == 0 && '--' || '' }}>
+              <${{ steps.trivy.outputs.exit == 0 && '!--' || '' }}details>
+              <summary>
+              <h3>Trivy scan results</h3>
+              </summary>
+              ${{ steps.trivy.outputs.output }}
+              </details${{ steps.trivy.outputs.exit == 0 && '--' || '' }}>
 
-      #         <${{ steps.checkov.outputs.exit == 0 && '!--' || '' }}details>
-      #         <summary>
-      #         <h3>Checkov scan results</h3>
-      #         </summary>
-      #         ${{ steps.checkov.outputs.output }}
-      #         </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
+              <${{ steps.checkov.outputs.exit == 0 && '!--' || '' }}details>
+              <summary>
+              <h3>Checkov scan results</h3>
+              </summary>
+              ${{ steps.checkov.outputs.output }}
+              </details${{ steps.checkov.outputs.exit == 0 && '--' || '' }}>
 
-      # - name: Label PR with module name
-      #   if: github.event_name == 'pull_request'
-      #   uses: actions/github-script@v7
-      #   with:
-      #     script: |
-      #       github.rest.issues.addLabels({
-      #         issue_number: context.issue.number,
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         labels: `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)
-      #       })
+      - name: Label PR with module name
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)
+            })
 
       - name: Get version tags
         id: version_tags
@@ -601,206 +601,221 @@ jobs:
             core.setOutput('versions', versions);
             core.setOutput('out_string', out_string);
 
-      # - name: Build Summary Comment
-      #   if: env.is-merge-event == 'false'
-      #   uses: ./.github/actions/pr-comment
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     commit_sha: ${{ github.event.after }}
-      #     update_existing: true
-      #     comment_capture: '## Terraform Module Release'
-      #     comment: |
-      #         ## Terraform Module Release
+      - name: Build Summary Comment
+        if: env.is-merge-event == 'false'
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
 
-      #         ✨ CICD Run Completed successfully!
+              ✨ CICD Run Completed successfully!
 
-      #         |Format|Init|Validate|Lint|Trivy|Checkov|
-      #         |-|-|-|-|-|-|
-      #         |✅|✅|✅|✅|✅|✅|
+              |Format|Init|Validate|Lint|Trivy|Checkov|
+              |-|-|-|-|-|-|
+              |✅|✅|✅|✅|✅|✅|
 
 
-      #         ## Release Plan
-      #         | Module | Previous version | New version |
-      #         |--|--|--|
-      #         ${{ steps.version_tags.outputs.out_string }}
+              ## Release Plan
+              | Module | Previous version | New version |
+              |--|--|--|
+              ${{ steps.version_tags.outputs.out_string }}
 
-      #         <details>
-      #         <summary>
-      #         <h3>Commits</h3>
-      #         </summary>
+              <details>
+              <summary>
+              <h3>Commit message preview</h3>
+              </summary>
 
-      #         ${{ steps.pr_details.outputs.commits }}
+              * PR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }}
+
+              ```
+              ${{ steps.changelog.outputs.changelog }}
+              ```
               
-      #         </details>
+              </details>
+
+              <details>
+              <summary>
+              <h3>Commits</h3>
+              </summary>
+
+              ${{ steps.pr_details.outputs.commits }}
+              
+              </details>
                             
 
-      #         <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
-      #         <summary>
-      #         <h3>Trivy Skipped Checks</h3>
-      #         </summary>
+              <${{ steps.trivy.outputs.ignored == '' && '!--' || '' }}details>
+              <summary>
+              <h3>Trivy Skipped Checks</h3>
+              </summary>
               
-      #         ${{ steps.trivy.outputs.ignored }}
+              ${{ steps.trivy.outputs.ignored }}
               
-      #         </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
+              </details${{ steps.trivy.outputs.ignored == '' && '--' || '' }}>
 
-      #         <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
-      #         <summary>
-      #         <h3>Checkov Skipped Checks</h3>
-      #         </summary>
+              <${{ steps.checkov.outputs.ignored == '' && '!--' || '' }}details>
+              <summary>
+              <h3>Checkov Skipped Checks</h3>
+              </summary>
               
-      #         ${{ steps.checkov.outputs.ignored }}
+              ${{ steps.checkov.outputs.ignored }}
               
-      #         </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
+              </details${{ steps.checkov.outputs.ignored == '' && '--' || '' }}>
+     
 
-      # - name: Generate TF Docs
-      #   id: tf_docs
-      #   run: |
-      #       declare -A tfdoc_output
-      #       rtn_chk=0
-      #       init_dir="${{ github.workspace }}"
+      - name: Generate TF Docs
+        if: env.is-merge-event == 'true'
+        id: tf_docs
+        run: |
+            declare -A tfdoc_output
+            rtn_chk=0
+            init_dir="${{ github.workspace }}"
 
-      #       which terraform-docs
+            which terraform-docs
             
-      #       while read -r tf_dir; do
-      #         if [ -d "${init_dir}/${tf_dir}" ]; then
-      #           tfdoc_output["$tf_dir"]="$(terraform-docs markdown table --sort-by required --sort-by name "${init_dir}/${tf_dir}" 2>&1 || true)"
-      #         else
-      #           compliance_scan["$tf_dir"]="  Unable to check directory"
-      #         fi
-      #       done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
+            while read -r tf_dir; do
+              if [ -d "${init_dir}/${tf_dir}" ]; then
+                tfdoc_output["$tf_dir"]="$(terraform-docs markdown table --sort-by required --sort-by name "${init_dir}/${tf_dir}" 2>&1 || true)"
+              else
+                compliance_scan["$tf_dir"]="  Unable to check directory"
+              fi
+            done <<< '${{ steps.pr_details.outputs.changed_dirs }}'
 
-      #       json=$(for key in "${!tfdoc_output[@]}"; do
-      #         jq -n --arg key "$key" --arg value "${tfdoc_output[$key]}" \
-      #           '{($key): $value}'
-      #       done | jq -rs 'add')
+            json=$(for key in "${!tfdoc_output[@]}"; do
+              jq -n --arg key "$key" --arg value "${tfdoc_output[$key]}" \
+                '{($key): $value}'
+            done | jq -rs 'add')
 
-      #       {
-      #         echo "docs_json<<EOF"
-      #         echo "$json"
-      #         echo "EOF"
-      #       }  >> "$GITHUB_OUTPUT"
+            {
+              echo "docs_json<<EOF"
+              echo "$json"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
 
-      #       echo -e "JSON: ${json}"
+            echo -e "JSON: ${json}"
 
-      # - name: Checkout wiki
-      #   # if: env.is-merge-event == 'true'
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: ${{ github.repository }}.wiki
-      #     path: "${{ github.workspace }}/wiki"
-      #     fetch-depth: 0
+      - name: Checkout wiki
+        if: env.is-merge-event == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: "${{ github.workspace }}/wiki"
+          fetch-depth: 0
           
-      # - name: Generate wiki page
-      #   uses: actions/github-script@v7
-      #   id: generate_wiki
-      #   if: env.is-merge-event == 'true'
-      #   with:
-      #     script: |
-      #       console.log("started");
-      #       const { owner, repo } = context.repo;
-      #       const { readdir, readFile, writeFile, mkdir } = require('fs').promises;
-      #       const utf8 = { encoding: 'utf-8' };
-      #       const msgParts = [];
-      #       let error = "";
+      - name: Generate wiki page
+        uses: actions/github-script@v7
+        id: generate_wiki
+        if: env.is-merge-event == 'true'
+        with:
+          script: |
+            console.log("started");
+            const { owner, repo } = context.repo;
+            const { readdir, readFile, writeFile, mkdir } = require('fs').promises;
+            const utf8 = { encoding: 'utf-8' };
+            const msgParts = [];
+            let error = "";
 
-      #       const versions = JSON.parse((function() {/*${{ steps.version_tags.outputs.versions }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
-      #       const tf_docs = JSON.parse((function() {/*${{ steps.tf_docs.outputs.docs_json }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
+            const versions = JSON.parse((function() {/*${{ steps.version_tags.outputs.versions }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
+            const tf_docs = JSON.parse((function() {/*${{ steps.tf_docs.outputs.docs_json }}*/}).toString().match(/[^]*\/\*([^]*)\*\/\}$/)[1]);
 
-      #       console.log(`versions: ${JSON.stringify(versions)}`);
-      #       console.log(`tf_docs: ${JSON.stringify(tf_docs)}`);
+            console.log(`versions: ${JSON.stringify(versions)}`);
+            console.log(`tf_docs: ${JSON.stringify(tf_docs)}`);
             
-      #       const newPage = `
-      #       Replace with an introduction about the module!
-      #       Text and markdown up here will be preserved over time,
-      #       while the rest of the wiki page is generated from the release process.
+            const newPage = `
+            Replace with an introduction about the module!
+            Text and markdown up here will be preserved over time,
+            while the rest of the wiki page is generated from the release process.
 
-      #       # Module Location
+            # Module Location
             
-      #       To use this module in your Terraform, use the below source value.
+            To use this module in your Terraform, use the below source value.
             
-      #       \`\`\`hcl
-      #       module "__MODULE_DIR__" {
-      #         source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
-      #         # also any inputs for the module (see below)
-      #       }
-      #       \`\`\`
+            \`\`\`hcl
+            module "__MODULE_DIR__" {
+              source = "git::${{ github.server_url }}/${{ github.repository }}.git?ref=__MODULE_DIR__/v__MODULE_VERSION__"
+              # also any inputs for the module (see below)
+            }
+            \`\`\`
             
-      #       __WARNING: Sections below this comment will be replaced and/or added to automatically.__
-      #       `;
+            __WARNING: Sections below this comment will be replaced and/or added to automatically.__
+            `;
 
-      #       console.log(`newPage: ${newPage}`);
+            console.log(`newPage: ${newPage}`);
 
-      #       try {
-      #           await mkdir('${{ github.workspace }}/wiki/generated')
-      #       } catch (err) {
-      #         if (err.code !== 'EEXIST') { 
-      #           console.log(`Dir error: ${JSON.stringify(err)}`);
-      #           error = JSON.stringify(err);
-      #           return error;
-      #         }
-      #       }
+            try {
+                await mkdir('${{ github.workspace }}/wiki/generated')
+            } catch (err) {
+              if (err.code !== 'EEXIST') { 
+                console.log(`Dir error: ${JSON.stringify(err)}`);
+                error = JSON.stringify(err);
+                return error;
+              }
+            }
             
-      #       for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
+            for (const folder of `${{ steps.pr_details.outputs.changed_dirs }}`.split(/\r?\n/)) {
 
-      #         console.log(`Processing dir: ${folder}`);
+              console.log(`Processing dir: ${folder}`);
 
-      #         const newVersion = versions[folder].newVer;
+              const newVersion = versions[folder].newVer;
 
-      #         const readText = (name) => readFile(name, utf8).then(x => x.trim());
-      #         const wikiPath = `wiki/generated/${folder}.md`;
-      #         const prevWiki = await readText(wikiPath)
-      #           .catch(err => err.code === 'ENOENT' ? newPage.replaceAll('__MODULE_DIR__', folder).replaceAll('__MODULE_VERSION__', newVersion) : Promise.reject(err));
+              const readText = (name) => readFile(name, utf8).then(x => x.trim());
+              const wikiPath = `wiki/generated/${folder}.md`;
+              const prevWiki = await readText(wikiPath)
+                .catch(err => err.code === 'ENOENT' ? newPage.replaceAll('__MODULE_DIR__', folder).replaceAll('__MODULE_VERSION__', newVersion) : Promise.reject(err));
               
-      #         if (!prevWiki) { console.warn('Starting new wiki page for', folder); }
+              if (!prevWiki) { console.warn('Starting new wiki page for', folder); }
               
-      #         const docs = tf_docs[folder];
-      #         const changelog = `
+              const docs = tf_docs[folder];
+              const changelog = `
               
-      #         * PR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }}
+              * PR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }}
               
-      #         \`\`\`
-      #         ${{ steps.changelog.outputs.changelog }}
-      #         \`\`\`
-      #         `;
+              \`\`\`
+              ${{ steps.changelog.outputs.changelog }}
+              \`\`\`
+              `;
               
-      #         let newWiki = prevWiki;
-      #         if (!newWiki.match(/^<!-- BEGIN DOCS -->$/m)) {
-      #           newWiki += `\n<!-- BEGIN DOCS -->\n<!-- END DOCS -->\n`;
-      #         }
+              let newWiki = prevWiki;
+              if (!newWiki.match(/^<!-- BEGIN DOCS -->$/m)) {
+                newWiki += `\n<!-- BEGIN DOCS -->\n<!-- END DOCS -->\n`;
+              }
               
-      #         newWiki = newWiki.replace(/^<!-- BEGIN DOCS -->$[^]+^<!-- END DOCS -->$/m,
-      #           `<!-- BEGIN DOCS -->\n${docs}\n<!-- END DOCS -->`);
+              newWiki = newWiki.replace(/^<!-- BEGIN DOCS -->$[^]+^<!-- END DOCS -->$/m,
+                `<!-- BEGIN DOCS -->\n${docs}\n<!-- END DOCS -->`);
               
-      #         if (!newWiki.match(/^<!-- CHANGELOG MARKER -->$/m)) {
-      #           newWiki += `\n\n# Changelog\n<!-- CHANGELOG MARKER -->\n`;
-      #         }
+              if (!newWiki.match(/^<!-- CHANGELOG MARKER -->$/m)) {
+                newWiki += `\n\n# Changelog\n<!-- CHANGELOG MARKER -->\n`;
+              }
               
-      #         const changelogHeader = `## ${newVersion} (${new Date().toISOString().split('T')[0]})`
+              const changelogHeader = `## ${newVersion} (${new Date().toISOString().split('T')[0]})`
               
-      #         newWiki = newWiki.replace(/^<!-- CHANGELOG MARKER -->$/m,
-      #           `<!-- CHANGELOG MARKER -->\n${changelogHeader}\n${changelog}\n`);
+              newWiki = newWiki.replace(/^<!-- CHANGELOG MARKER -->$/m,
+                `<!-- CHANGELOG MARKER -->\n${changelogHeader}\n${changelog}\n`);
               
-      #         await writeFile(wikiPath, newWiki, utf8);
+              await writeFile(wikiPath, newWiki, utf8);
               
-      #         msgParts.push(`${folder} @ ${newVersion}`);
+              msgParts.push(`${folder} @ ${newVersion}`);
               
-      #         console.log(`Updated ${folder} @ ${newVersion}`);
-      #       }
-      #       return msgParts.join(', ');
-      #     result-encoding: string
+              console.log(`Updated ${folder} @ ${newVersion}`);
+            }
+            return msgParts.join(', ');
+          result-encoding: string
 
-      # - name: Push changes to wiki
-      #   if: env.is-merge-event == 'true'
-      #   working-directory: "${{ github.workspace }}/wiki"
-      #   run: |
-      #     git config --local user.email "github-actions[bot]@users.noreply.github.com"
-      #     git config --local user.name "github-actions[bot]"
-      #     git add -A
-      #     git commit -m "${{ steps.generate_wiki.outputs.result }}"
-      #     git push
+      - name: Push changes to wiki
+        if: env.is-merge-event == 'true'
+        working-directory: "${{ github.workspace }}/wiki"
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "${{ steps.generate_wiki.outputs.result }}"
+          git push
 
       - name: Create release branches
-        # if: env.is-merge-event == 'true'
+        if: env.is-merge-event == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
