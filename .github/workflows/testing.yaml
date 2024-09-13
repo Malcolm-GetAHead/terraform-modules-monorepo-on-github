@@ -32,14 +32,10 @@ env:
 
 jobs:
   detect:
+    if: contains( github.event.pull_request.labels.*.name, 'no-release')
     runs-on: ubuntu-latest
     name: 'Prepare and release'
     steps:
-      - name: dump github context
-        run: |
-          cat << EOF > /dev/null
-            ${{ toJson(github) }}
-          EOF
 
       - name: Checkout
         uses: actions/checkout@v4
