@@ -1,0 +1,91 @@
+name: GitHub PR Details
+description: Obtain labels and altered file listing from a GitHub PR
+
+inputs:
+  token:
+    description: 'GitHub runner token'
+    required: true
+  pr_url:
+    description: 'Return failure after posting message'
+    required: true
+
+outputs:
+  release_label:
+    description: 'Release label attached to PR'
+    value: '${{ steps.pr_details.outputs.release_label }}'
+  label_error:
+    description: "Error message if there's an issue obtaining release the label"
+    value: '${{ steps.pr_details.outputs.label_error }}'
+  changed_dirs:
+    description: 'List of changed dirs with TF files'
+    value: '${{ steps.pr_details.outputs.changed_dirs }}'
+  path_error:
+    description: "Error message if there's an issue obtaining paths of changed TF files"
+    value: '${{ steps.pr_details.outputs.path_error }}'
+  commits:
+    description: "Commits on the PR"
+    value: '${{ steps.pr_details.outputs.commits }}'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: PR Comment
+      id: pr_details
+      env:
+        PR_URL: ${{ inputs.pr_url }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      shell: bash
+      run: |
+          PR_DETAILS=$(gh pr view "$PR_URL" --json labels,changedFiles,files,commits)
+
+          echo "${PR_DETAILS}"
+          
+          CHANGED_DIRS=$(echo "${PR_DETAILS}" | jq -r '[.files[] | select(.path | endswith(".tf")) | .path | (if contains("/") then split("/") | .[0:-1] | join("/") else "." end) | select(. | startswith(".") | not)] | unique[]')
+          LABELS=$(echo "${PR_DETAILS}" | jq -r '.labels[]| select((.name=="minor") or (.name=="major") or (.name=="patch") or (.name=="no-release")) |.name')
+          COMMITS=$(echo "${PR_DETAILS}" | jq -r '.commits[] | "* \(.oid[:7]) - \(.messageHeadline)"')
+          
+          NUMBER_OF_LABELS=$(echo "$LABELS" |wc -w)
+          NUMBER_OF_DIRS=$(echo "$CHANGED_DIRS" |wc -w)
+          
+          if [ "$NUMBER_OF_LABELS" -eq "1" ] ; then
+            echo "Found label: $LABELS"
+            echo "release_label=$LABELS" >> "$GITHUB_OUTPUT"
+            echo "label_error=" >> "$GITHUB_OUTPUT"
+          elif [ "$NUMBER_OF_LABELS" -gt "1" ] ; then
+            {
+              echo "label_error<<EOF"
+              echo "### PR Label error"
+              echo "Too many release type labels: $( echo "$LABELS" | tr '\n' ' ' )"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "label_error<<EOF"
+              echo "### PR Label error"
+              echo "No release type labels found (patch/minor/major/no-release)"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$NUMBER_OF_DIRS" -gt "0" ]; then
+            echo "Found Dirs: $CHANGED_DIRS"
+            {
+              echo "changed_dirs<<EOF"
+              echo "$CHANGED_DIRS"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+            echo "path_error="  >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "path_error<<EOF"
+              echo "### PR Path error"
+              echo "No terraform files found in directories with changes"
+              echo "EOF"
+            }  >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo "commits<<EOF"
+            echo -e "${COMMITS}"
+            echo "EOF"
+          }  >> "$GITHUB_OUTPUT"
