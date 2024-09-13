@@ -41,6 +41,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: CICD Start PR comment
+        if: env.is-merge-event == 'false'
         uses: ./.github/actions/pr-comment
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -51,6 +52,27 @@ jobs:
               ## Terraform Module Release
 
               :rocket: CICD Run Initilized!
+
+      - name: Get PR Labels and changed dirs
+        id: pr_details
+        uses: ./.github/actions/pr-details
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pr_url: ${{ github.event.pull_request.html_url }}
+          
+      - name: Fail on invalid PR details
+        uses: ./.github/actions/pr-comment
+        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit_sha: ${{ github.event.after }}
+          fail_run: true
+          update_existing: true
+          comment_capture: '## Terraform Module Release'
+          comment: |
+              ## Terraform Module Release
+              ${{ steps.pr_details.outputs.label_error }}
+              ${{ steps.pr_details.outputs.path_error }}
 
       - name: Extract changelog entry
         id: changelog
@@ -65,15 +87,15 @@ jobs:
 
             console.log(`Found PR body:|\n${prInfo.body}`);
 
-            const changelogEntry = ((prInfo.body
+            const changelogEntry = prInfo.body ? ((prInfo.body
               .split(/^#+ ?/m)
               .find(x => x.startsWith('Changelog'))
-              || '').split(/^```/m)[1] || '').trim();
+              || '').split(/^```/m)[1] || '').trim() : '';
 
             let changelog_error = "";
 
             if (!changelogEntry || changelogEntry === '') {
-              changelog_error = `'Changelog' section not found in PR body! Please add it back.`;
+              changelog_error = "'Changelog' section not found in PR body! See [.github/pull_request_template.md](../blob/master/.github/pull_request_template.md) for an example.";
             }
 
             if (changelogEntry.match(/^TODO:/m)) {
@@ -135,27 +157,6 @@ jobs:
               $x
               echo "---"
             done
-
-      - name: Get PR Labels and changed dirs
-        id: pr_details
-        uses: ./.github/actions/pr-details
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pr_url: ${{ github.event.pull_request.html_url }}
-          
-      - name: Fail on invalid PR details
-        uses: ./.github/actions/pr-comment
-        if: steps.pr_details.outputs.label_error != '' || steps.pr_details.outputs.path_error != ''
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit_sha: ${{ github.event.after }}
-          fail_run: true
-          update_existing: true
-          comment_capture: '## Terraform Module Release'
-          comment: |
-              ## Terraform Module Release
-              ${{ steps.pr_details.outputs.label_error }}
-              ${{ steps.pr_details.outputs.path_error }}
 
       - name: Terraform Format
         if: env.is-merge-event == 'false'
