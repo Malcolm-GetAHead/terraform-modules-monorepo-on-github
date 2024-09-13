@@ -32,7 +32,7 @@ env:
 
 jobs:
   check-and-release:
-    if: contains(github.event.pull_request.labels.*.name, 'no-release')
+    if: ! contains(github.event.pull_request.labels.*.name, 'no-release')
     runs-on: ubuntu-latest
     name: 'Prepare and release'
     steps:
